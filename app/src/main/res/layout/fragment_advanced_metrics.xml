@@ -1,0 +1,288 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/bg_black_gold"
+    android:padding="20dp"
+    android:clipToPadding="false">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="12dp"
+        android:background="@drawable/bg_glassmorphism"
+        android:orientation="vertical"
+        android:padding="24dp">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Advanced Metrics"
+            android:textAppearance="@style/TextAppearance.Material3.HeadlineMedium"
+            android:textColor="@color/jg_gold_light"
+            android:textStyle="bold" />
+
+        <ImageView
+            android:id="@+id/previewImage"
+            android:layout_width="match_parent"
+            android:layout_height="220dp"
+            android:layout_marginTop="12dp"
+            android:background="@drawable/bg_preview"
+            android:scaleType="centerCrop" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/toggleDetectionsButton"
+            style="@style/JewelGrade.TextButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:text="Show Original" />
+
+        <TextView
+            android:id="@+id/debugInfoText"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:background="@drawable/bg_dashboard_tile"
+            android:padding="8dp"
+            android:text="Debug:"
+            android:textColor="@color/jg_text_secondary"
+            android:textSize="11sp" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:text="Algorithm Scores"
+            android:textColor="@color/jg_gold"
+            android:textStyle="bold" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:layout_marginTop="8dp">
+
+            <TextView
+                android:id="@+id/yoloScoreText"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="YOLOv8: 0/100"
+                android:textColor="@color/jg_text_primary"
+                android:textSize="16sp"
+                android:textStyle="bold" />
+
+            <ProgressBar
+                android:id="@+id/yoloScoreBar"
+                style="?android:attr/progressBarStyleHorizontal"
+                android:layout_width="match_parent"
+                android:layout_height="10dp"
+                android:layout_marginTop="6dp"
+                android:max="100"
+                android:progressDrawable="@drawable/progress_algorithm_rounded"
+                android:progress="0" />
+
+            <TextView
+                android:id="@+id/lbpScoreText"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:text="LBP: 0/100"
+                android:textColor="@color/jg_text_primary"
+                android:textSize="16sp" />
+
+            <ProgressBar
+                android:id="@+id/lbpScoreBar"
+                style="?android:attr/progressBarStyleHorizontal"
+                android:layout_width="match_parent"
+                android:layout_height="10dp"
+                android:layout_marginTop="6dp"
+                android:max="100"
+                android:progressDrawable="@drawable/progress_algorithm_rounded"
+                android:progress="0" />
+
+            <TextView
+                android:id="@+id/orbScoreText"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:text="ORB Match: 0/100"
+                android:textColor="@color/jg_text_primary"
+                android:textSize="16sp" />
+
+            <ProgressBar
+                android:id="@+id/orbScoreBar"
+                style="?android:attr/progressBarStyleHorizontal"
+                android:layout_width="match_parent"
+                android:layout_height="10dp"
+                android:layout_marginTop="6dp"
+                android:max="100"
+                android:progressDrawable="@drawable/progress_algorithm_rounded"
+                android:progress="0" />
+
+            <TextView
+                android:id="@+id/totalScoreText"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:text="Overall Likelihood: 0%"
+                android:textColor="@color/jg_gold_light"
+                android:textSize="18sp"
+                android:textStyle="bold" />
+
+            <ProgressBar
+                android:id="@+id/overallScoreBar"
+                style="?android:attr/progressBarStyleHorizontal"
+                android:layout_width="match_parent"
+                android:layout_height="12dp"
+                android:layout_marginTop="6dp"
+                android:max="100"
+                android:progressDrawable="@drawable/progress_overall_rounded"
+                android:progress="0" />
+
+            <TextView
+                android:id="@+id/quickInterpretationText"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="10dp"
+                android:background="@drawable/bg_dashboard_tile"
+                android:padding="10dp"
+                android:text="Quick interpretation"
+                android:textColor="@color/jg_text_secondary"
+                android:textSize="13sp" />
+
+            <TextView
+                android:id="@+id/tierBadgeText"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="10dp"
+                android:background="@drawable/bg_badge_tier_d"
+                android:clickable="true"
+                android:drawableStart="@drawable/ic_medal"
+                android:drawablePadding="6dp"
+                android:focusable="true"
+                android:paddingStart="12dp"
+                android:paddingTop="6dp"
+                android:paddingEnd="12dp"
+                android:paddingBottom="6dp"
+                android:text="Tier D"
+                android:textAllCaps="true"
+                android:textColor="#FFFFFF"
+                android:textSize="12sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/gradingCriteriaText"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:text=""
+                android:textColor="@color/jg_text_secondary"
+                android:textSize="12sp"
+                android:visibility="gone" />
+
+            <TextView
+                android:id="@+id/expectedWeightText"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="6dp"
+                android:text="Expected weight: N/A"
+                android:textColor="@color/jg_text_secondary" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:text="Why This Score"
+                android:textColor="@color/jg_gold"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/explainabilityText"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="6dp"
+                android:background="@drawable/bg_dashboard_tile"
+                android:padding="10dp"
+                android:textColor="@color/jg_text_secondary" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:text="Re-scan Suggestions"
+                android:textColor="@color/jg_gold"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/rescanSuggestionsText"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="6dp"
+                android:background="@drawable/bg_dashboard_tile"
+                android:padding="10dp"
+                android:textColor="@color/jg_text_secondary" />
+
+        </LinearLayout>
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:text="Predicted Karat"
+            android:textColor="@color/jg_gold"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/materialText"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textColor="@color/jg_text_primary"
+            android:background="@drawable/bg_dashboard_tile"
+            android:padding="10dp"
+            android:layout_marginTop="6dp" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:text="Analysis"
+            android:textColor="@color/jg_gold"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/analysisText"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textColor="@color/jg_text_secondary"
+            android:background="@drawable/bg_dashboard_tile"
+            android:padding="10dp"
+            android:layout_marginTop="6dp" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:text="Similar Products"
+            android:textColor="@color/jg_gold"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/similarProductsText"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textColor="@color/jg_text_secondary"
+            android:background="@drawable/bg_dashboard_tile"
+            android:padding="10dp"
+            android:layout_marginTop="6dp" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/backButton"
+            style="@style/JewelGrade.TextButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Back" />
+
+    </LinearLayout>
+
+</ScrollView>

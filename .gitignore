@@ -1,0 +1,24 @@
+# Android/Gradle build outputs
+.gradle/
+.kotlin/
+**/build/
+app/build/
+
+# IDE/editor
+.idea/
+.vscode/
+*.iml
+
+# Local SDK/project settings
+local.properties
+
+# Python virtual environment
+.venv/
+venv/
+
+# Large local archives/artifacts
+*.zip
+
+# OS files
+.DS_Store
+Thumbs.db

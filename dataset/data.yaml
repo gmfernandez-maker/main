@@ -1,0 +1,11 @@
+# YOLO dataset config
+# Update names and ensure your images/labels are populated before training.
+path: dataset
+train: images/train
+val: images/val
+test: images/test
+names:
+  0: ring
+  1: earring
+  2: necklace
+  3: bracelet

@@ -1,0 +1,212 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/bg_black_gold"
+    android:padding="20dp"
+    android:clipToPadding="false">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="12dp"
+        android:background="@drawable/bg_glassmorphism"
+        android:orientation="vertical"
+        android:padding="24dp">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Jewelry Analysis Report"
+            android:textAppearance="@style/TextAppearance.Material3.HeadlineMedium"
+            android:textColor="@color/jg_gold_light"
+            android:textStyle="bold" />
+
+        <ImageView
+            android:id="@+id/previewImage"
+            android:layout_width="match_parent"
+            android:layout_height="220dp"
+            android:layout_marginTop="12dp"
+            android:background="@drawable/bg_preview"
+            android:scaleType="centerCrop" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/toggleDetectionsButton"
+            style="@style/JewelGrade.TextButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:text="Show Original" />
+
+        <TextView
+            android:id="@+id/totalScoreText"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:text="Visual Similarity Score: 0%"
+            android:textColor="@color/jg_gold_light"
+            android:textSize="20sp"
+            android:textStyle="bold" />
+
+        <ProgressBar
+            android:id="@+id/overallScoreBar"
+            style="?android:attr/progressBarStyleHorizontal"
+            android:layout_width="match_parent"
+            android:layout_height="12dp"
+            android:layout_marginTop="6dp"
+            android:max="100"
+            android:progress="0"
+            android:progressDrawable="@drawable/progress_overall_rounded" />
+
+        <TextView
+            android:id="@+id/tierBadgeText"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:background="@drawable/bg_badge_tier_d"
+            android:paddingStart="12dp"
+            android:paddingTop="6dp"
+            android:paddingEnd="12dp"
+            android:paddingBottom="6dp"
+            android:text="Assessment: Low Similarity"
+            android:textAllCaps="false"
+            android:textColor="#FFFFFF"
+            android:textSize="12sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:text="Predicted Karat"
+            android:textColor="@color/jg_gold"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/materialText"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="6dp"
+            android:background="@drawable/bg_dashboard_tile"
+            android:padding="10dp"
+            android:maxLines="2"
+            android:ellipsize="end"
+            android:singleLine="false"
+            android:textColor="@color/jg_text_primary"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/karatBasisText"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:text="Based on visual analysis"
+            android:textColor="@color/jg_text_secondary"
+            android:textSize="12sp" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:text="Item Information"
+            android:textColor="@color/jg_gold"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/itemTypeText"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="6dp"
+            android:background="@drawable/bg_dashboard_tile"
+            android:padding="10dp"
+            android:text="Item Type: Unknown"
+            android:textColor="@color/jg_text_primary" />
+
+        <TextView
+            android:id="@+id/modelUsedText"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:text="Analysis Tool: AI Computer Vision"
+            android:textColor="@color/jg_text_secondary"
+            android:textSize="12sp" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:text="What This Result Suggests"
+            android:textColor="@color/jg_gold"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/analysisText"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="6dp"
+            android:background="@drawable/bg_dashboard_tile"
+            android:padding="10dp"
+            android:textColor="@color/jg_text_secondary" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:text="Re-scan Suggestions"
+            android:textColor="@color/jg_gold"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/rescanSuggestionsText"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="6dp"
+            android:background="@drawable/bg_dashboard_tile"
+            android:padding="10dp"
+            android:textColor="@color/jg_text_secondary" />
+
+        <TextView
+            android:id="@+id/disclaimerText"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:layout_marginBottom="4dp"
+            android:text="⚠️ Disclaimer: This app provides visual analysis only and is NOT a professional appraisal, authenticity certification, or guarantee of gold purity. Always consult a certified jeweler or appraiser before buying, selling, or trading jewelry."
+            android:textColor="@color/jg_error"
+            android:textSize="12sp"
+            android:textStyle="bold" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/advancedMetricsButton"
+            style="@style/JewelGrade.OutlinedButton"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:text="Advanced Metrics" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/addStampButton"
+            style="@style/JewelGrade.OutlinedButton"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:text="Add Stamp Closeup" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/gradeAnotherButton"
+            style="@style/JewelGrade.PrimaryButton"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:text="Grade Another" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/backButton"
+            style="@style/JewelGrade.TextButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Back" />
+
+    </LinearLayout>
+
+</ScrollView>

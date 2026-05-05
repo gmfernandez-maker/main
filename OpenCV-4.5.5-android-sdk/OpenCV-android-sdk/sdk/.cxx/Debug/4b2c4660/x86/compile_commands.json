@@ -1,0 +1,7 @@
+[
+{
+  "directory": "C:/Users/Gabby/OneDrive/Desktop/PixelPioneers/main/OpenCV-4.5.5-android-sdk/OpenCV-android-sdk/sdk/.cxx/Debug/4b2c4660/x86",
+  "command": "C:\\Users\\Gabby\\AppData\\Local\\Android\\Sdk\\ndk\\27.0.12077973\\toolchains\\llvm\\prebuilt\\windows-x86_64\\bin\\clang++.exe --target=i686-none-linux-android21 --sysroot=C:/Users/Gabby/AppData/Local/Android/Sdk/ndk/27.0.12077973/toolchains/llvm/prebuilt/windows-x86_64/sysroot -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -mstackrealign -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security   -fno-limit-debug-info  -fPIC -o CMakeFiles\\opencv_jni_shared.dir\\dummy.cpp.o -c C:\\Users\\Gabby\\OneDrive\\Desktop\\PixelPioneers\\main\\OpenCV-4.5.5-android-sdk\\OpenCV-android-sdk\\sdk\\libcxx_helper\\dummy.cpp",
+  "file": "C:\\Users\\Gabby\\OneDrive\\Desktop\\PixelPioneers\\main\\OpenCV-4.5.5-android-sdk\\OpenCV-android-sdk\\sdk\\libcxx_helper\\dummy.cpp"
+}
+]

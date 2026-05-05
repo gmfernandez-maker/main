@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="Theme.StudioWebWrapper" parent="Theme.Material3.DayNight.NoActionBar">
+        <item name="colorPrimary">@color/jg_gold</item>
+        <item name="colorOnPrimary">@color/jg_black</item>
+        <item name="colorSecondary">@color/jg_gold_light</item>
+        <item name="colorOnSecondary">@color/jg_black</item>
+        <item name="colorSurface">@color/jg_black_card</item>
+        <item name="colorOnSurface">@color/jg_text_primary</item>
+        <item name="android:windowBackground">@drawable/bg_black_gold</item>
+        <item name="android:statusBarColor">@color/jg_black</item>
+        <item name="android:navigationBarColor">@color/jg_black</item>
+    </style>
+</resources>

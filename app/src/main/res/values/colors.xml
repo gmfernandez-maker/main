@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="jg_black">#13110A</color>
+    <color name="jg_black_soft">#F7F3E7</color>
+    <color name="jg_black_card">#FFFDF7</color>
+    <color name="jg_gold">#B78A18</color>
+    <color name="jg_gold_light">#D4A62F</color>
+    <color name="jg_gold_dark">#8C6A10</color>
+    <color name="jg_text_primary">#1D1708</color>
+    <color name="jg_text_secondary">#6B5730</color>
+    <color name="jg_error">#FF6B6B</color>
+
+    <color name="jg_bg_gradient_start">#FFFCF2</color>
+    <color name="jg_bg_gradient_mid">#F8F0D9</color>
+    <color name="jg_bg_gradient_end">#F2E5BF</color>
+
+    <color name="jg_panel_start">#F0E2BA</color>
+    <color name="jg_panel_end">#E8D6A2</color>
+
+    <color name="jg_glass_start">#CCFFF7E6</color>
+    <color name="jg_glass_mid">#BFFAEED3</color>
+    <color name="jg_glass_end">#CCF2E3C1</color>
+    <color name="jg_glass_stroke">#80CFA951</color>
+
+    <color name="jg_card_start">#F5E9C8</color>
+    <color name="jg_card_mid">#F2E1B7</color>
+    <color name="jg_card_end">#EED8A4</color>
+
+    <color name="jg_tile_fill">#F7EED2</color>
+    <color name="jg_tile_stroke">#C9A347</color>
+
+    <color name="jg_preview_start">#EBD9A8</color>
+    <color name="jg_preview_mid">#E5CE93</color>
+    <color name="jg_preview_end">#DDC37F</color>
+
+    <color name="jg_cta_start">#D8B24D</color>
+    <color name="jg_cta_end">#BF921A</color>
+
+    <color name="jg_nav_selected">#C69A28</color>
+    <color name="jg_nav_unselected">#7B6441</color>
+
+    <color name="jg_chip_checked">#E5C269</color>
+    <color name="jg_chip_unchecked">#D8C296</color>
+</resources>

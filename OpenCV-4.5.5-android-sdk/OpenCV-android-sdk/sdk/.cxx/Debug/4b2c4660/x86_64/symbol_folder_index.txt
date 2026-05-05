@@ -1,0 +1,1 @@
+C:\Users\Gabby\OneDrive\Desktop\PixelPioneers\main\OpenCV-4.5.5-android-sdk\OpenCV-android-sdk\sdk\build\intermediates\cxx\Debug\4b2c4660\obj\x86_64
