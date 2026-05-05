@@ -188,6 +188,36 @@ On Windows PowerShell:
 .\gradlew.bat installDebug
 ```
 
+## Quick Setup for New Contributors
+
+If someone downloads this repository, it should build successfully after basic Android setup.
+
+Required environment:
+
+1. Android Studio (recent stable)
+2. Android SDK installed (compileSdk/targetSdk 35)
+3. JDK 17
+4. Internet for first dependency download
+
+What to configure locally:
+
+1. [local.properties](local.properties) is not tracked, so each machine needs its own SDK path. Android Studio typically creates this automatically.
+2. Supabase keys are read from local properties or Gradle properties in [app/build.gradle.kts](app/build.gradle.kts):
+	- SUPABASE_URL
+	- SUPABASE_ANON_KEY
+
+Behavior note:
+
+1. The app can still build without Supabase values, but backend auth/grading features may be limited until those values are provided.
+
+Validation note:
+
+1. A full debug build was run successfully in this repository using:
+
+```powershell
+.\gradlew.bat assembleDebug
+```
+
 ## Important Notes
 
 - This app provides AI-assisted visual grading and similarity cues.
