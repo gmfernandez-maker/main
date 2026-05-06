@@ -202,9 +202,57 @@ class UploadFragment : Fragment() {
             }
 
             if (pipelineAnalysis == null || pipelineAnalysis.detections.isEmpty()) {
+                // No confident detections — show diagnostic info then offer forced-save option
                 setLoading(false)
-                currentBinding.statusText.text = "No jewelry item was confidently detected. Please retake the photo with one item centered in frame."
-                currentBinding.statusText.isVisible = true
+                val diagnostic = buildDiagnosticMessage(qualityReport, pipelineAnalysis, selectedBitmap!!)
+                androidx.appcompat.app.AlertDialog.Builder(requireContext())
+                    .setTitle("No jewelry detected")
+                    .setMessage(diagnostic)
+                    .setNeutralButton("Retake") { d, _ -> d.dismiss() }
+                    .setPositiveButton("Force Save") { d, _ ->
+                        d.dismiss()
+                        setLoading(true)
+                        viewLifecycleOwner.lifecycleScope.launch(Dispatchers.IO) {
+                            val requestForce = GradeRequest(
+                                fileDataUri = selectedDataUri!!,
+                                fileName = selectedFileName
+                            )
+                            val gradingResultForce = runCatching { NativeRepository.grade(requireContext(), requestForce) }.getOrNull()
+                            withContext(Dispatchers.Main) {
+                                setLoading(false)
+                                if (gradingResultForce == null) {
+                                    currentBinding.statusText.text = getString(R.string.generic_error)
+                                    currentBinding.statusText.isVisible = true
+                                } else {
+                                    gradingResultForce.onSuccess { response ->
+                                        if (response.error != null) {
+                                            currentBinding.statusText.text = response.error
+                                            currentBinding.statusText.isVisible = true
+                                            return@onSuccess
+                                        }
+                                        val payload = response.data
+                                        if (payload == null) {
+                                            currentBinding.statusText.text = getString(R.string.generic_error)
+                                            currentBinding.statusText.isVisible = true
+                                            return@onSuccess
+                                        }
+                                        val enhancedPayload = enrichResult(payload, qualityReport, pipelineAnalysis, null)
+                                        if (enhancedPayload.totalComputedScore < 5) {
+                                            currentBinding.statusText.text = "The app still needs a clearer photo before saving this result. Try retaking slightly closer or with steadier lighting."
+                                            currentBinding.statusText.isVisible = true
+                                            return@onSuccess
+                                        }
+                                        Toast.makeText(requireContext(), getString(R.string.grading_success), Toast.LENGTH_SHORT).show()
+                                        callbacks?.showGradeResult(enhancedPayload, selectedDataUri!!)
+                                    }.onFailure {
+                                        currentBinding.statusText.text = it.message ?: getString(R.string.generic_error)
+                                        currentBinding.statusText.isVisible = true
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    .show()
                 return@launch
             }
 
@@ -217,6 +265,50 @@ class UploadFragment : Fragment() {
                 }
             }
 
+            // Check material type and show alert if it's not gold
+            val materialScore = pipelineAnalysis?.materialScore
+            if (materialScore != null && materialScore.predicted != "gold") {
+                setLoading(false)
+                val materialTitle = when (materialScore.predicted) {
+                    "silver" -> "SILVER DETECTED"
+                    else -> "MATERIAL: ${materialScore.predicted.uppercase()}"
+                }
+                val materialMessage = when (materialScore.predicted) {
+                    "silver" -> "The jewelry submitted appears to be silver. Analysis on silver or whitegold can be inaccurate as the app is specialized for yellow gold.\n\nDo you want to continue grading this item?"
+                    else -> "The jewelry submitted appears to be ${materialScore.predicted.uppercase()}. Analysis on non-gold materials can be inaccurate as the app is specialized for yellow gold.\n\nDo you want to continue grading this item?"
+                }
+                
+                var shouldProceed = false
+                androidx.appcompat.app.AlertDialog.Builder(requireContext())
+                    .setTitle(materialTitle)
+                    .setMessage(materialMessage)
+                    .setNegativeButton("Retake") { d, _ -> d.dismiss() }
+                    .setPositiveButton("Continue") { d, _ ->
+                        d.dismiss()
+                        shouldProceed = true
+                    }
+                    .setOnDismissListener {
+                        if (shouldProceed) {
+                            // Proceed with grading after user confirms material type
+                            viewLifecycleOwner.lifecycleScope.launch(Dispatchers.IO) {
+                                val request = GradeRequest(
+                                    fileDataUri = selectedDataUri!!,
+                                    fileName = selectedFileName
+                                )
+
+                                val gradingResult = NativeRepository.grade(requireContext(), request)
+
+                                withContext(Dispatchers.Main) {
+                                    setLoading(false)
+                                    processGradingResult(gradingResult, qualityReport, pipelineAnalysis, stampOcrResult)
+                                }
+                            }
+                        }
+                    }
+                    .show()
+                return@launch
+            }
+
             val request = GradeRequest(
                 fileDataUri = selectedDataUri!!,
                 fileName = selectedFileName
@@ -227,37 +319,72 @@ class UploadFragment : Fragment() {
             }
 
             setLoading(false)
-            gradingResult.onSuccess { response ->
-                if (response.error != null) {
-                    currentBinding.statusText.text = response.error
-                    currentBinding.statusText.isVisible = true
-                    return@onSuccess
-                }
-                val payload = response.data
-                if (payload == null) {
-                    currentBinding.statusText.text = getString(R.string.generic_error)
-                    currentBinding.statusText.isVisible = true
-                    return@onSuccess
-                }
-                val enhancedPayload = enrichResult(payload, qualityReport, pipelineAnalysis, stampOcrResult)
-                if (enhancedPayload.totalComputedScore < 30) {
-                    currentBinding.statusText.text = "Confidence is too low to save this result. Please retake the photo."
-                    currentBinding.statusText.isVisible = true
-                    return@onSuccess
-                }
-                if (pipelineAnalysis?.yoloStatus?.contains("fallback", ignoreCase = true) == true) {
-                    Toast.makeText(
-                        requireContext(),
-                        "YOLOv8s failed to load, so the app used YOLOv8n instead.",
-                        Toast.LENGTH_LONG
-                    ).show()
-                }
-                Toast.makeText(requireContext(), getString(R.string.grading_success), Toast.LENGTH_SHORT).show()
-                callbacks?.showGradeResult(enhancedPayload, selectedDataUri!!)
-            }.onFailure {
-                currentBinding.statusText.text = it.message ?: getString(R.string.generic_error)
-                currentBinding.statusText.isVisible = true
+            processGradingResult(gradingResult, qualityReport, pipelineAnalysis, stampOcrResult)
+        }
+    }
+
+    private fun processGradingResult(
+        gradingResult: Result<com.gabby.studiowebwrapper.model.GradeResponse>,
+        qualityReport: ImageQualityReport,
+        pipelineAnalysis: VanillaPipelineResult?,
+        stampOcrResult: StampOcrResult?
+    ) {
+        gradingResult.onSuccess { response ->
+            if (response.error != null) {
+                binding?.statusText?.text = response.error
+                binding?.statusText?.isVisible = true
+                return@onSuccess
             }
+            val payload = response.data
+            if (payload == null) {
+                binding?.statusText?.text = getString(R.string.generic_error)
+                binding?.statusText?.isVisible = true
+                return@onSuccess
+            }
+            val enhancedPayload = enrichResult(payload, qualityReport, pipelineAnalysis, stampOcrResult)
+            if (enhancedPayload.totalComputedScore < 5) {
+                binding?.statusText?.text = "The app still needs a clearer photo before saving this result. Try retaking slightly closer or with steadier lighting."
+                binding?.statusText?.isVisible = true
+                return@onSuccess
+            }
+            if (pipelineAnalysis?.yoloStatus?.contains("fallback", ignoreCase = true) == true) {
+                Toast.makeText(
+                    requireContext(),
+                    "Using compatibility scan mode for this analysis.",
+                    Toast.LENGTH_LONG
+                ).show()
+            }
+            val selectedPreview = selectedDataUri
+            if (selectedPreview.isNullOrBlank()) {
+                binding?.statusText?.text = getString(R.string.generic_error)
+                binding?.statusText?.isVisible = true
+                return@onSuccess
+            }
+
+            val openResult = {
+                Toast.makeText(requireContext(), getString(R.string.grading_success), Toast.LENGTH_SHORT).show()
+                callbacks?.showGradeResult(enhancedPayload, selectedPreview)
+            }
+
+            if (!enhancedPayload.stampDetected) {
+                androidx.appcompat.app.AlertDialog.Builder(requireContext())
+                    .setTitle("No karat stamp detected")
+                    .setMessage(
+                        "No karat stamp was detected in this photo. If your jewelry has a karat stamp, take a close-up photo of the stamp on the result screen for a better estimate."
+                    )
+                    .setNegativeButton("Retake") { d, _ -> d.dismiss() }
+                    .setPositiveButton("Open Result") { d, _ ->
+                        d.dismiss()
+                        openResult()
+                    }
+                    .show()
+                return@onSuccess
+            }
+
+            openResult()
+        }.onFailure {
+            binding?.statusText?.text = it.message ?: getString(R.string.generic_error)
+            binding?.statusText?.isVisible = true
         }
     }
 
@@ -315,7 +442,61 @@ class UploadFragment : Fragment() {
 
     private fun buildBlockingQualityMessage(report: ImageQualityReport): String {
         val reasons = report.blockingIssues.joinToString(separator = "\n- ", prefix = "- ")
-        return "Quality check failed. Please retake the photo:\n$reasons"
+        return "This photo is too hard to read clearly. Please try again:\n$reasons"
+    }
+
+    private fun buildDiagnosticMessage(
+        qualityReport: ImageQualityReport,
+        pipelineResult: VanillaPipelineResult?,
+        bitmap: Bitmap
+    ): String {
+        val lines = mutableListOf<String>()
+        
+        lines.add("IMAGE QUALITY:")
+        lines.add("  Resolution: ${bitmap.width}×${bitmap.height}")
+        lines.add("  Brightness: ${String.format("%.1f", qualityReport.brightnessMean)}/255")
+        lines.add("  Contrast: ${String.format("%.1f", qualityReport.contrastStdDev)}")
+        lines.add("  Sharpness: ${String.format("%.1f", qualityReport.sharpnessVariance)}")
+        if (qualityReport.warnings.isNotEmpty()) {
+            lines.add("  Warnings: ${qualityReport.warnings.take(2).joinToString("; ")}")
+        }
+        
+        if (pipelineResult != null) {
+            lines.add("\nDETECTION:")
+            val scanMode = if (pipelineResult.yoloStatus.contains("fallback", ignoreCase = true)) {
+                "Compatibility mode"
+            } else {
+                "Standard mode"
+            }
+            lines.add("  Scanner status: $scanMode")
+            lines.add("  Items found: ${pipelineResult.detections.size}")
+            if (pipelineResult.detections.isNotEmpty()) {
+                val topDet = pipelineResult.detections.maxByOrNull { it.score }
+                lines.add("  Top confidence: ${String.format("%.1f", (topDet?.score ?: 0f) * 100)}%")
+            }
+            
+            lines.add("\nCOLOR ANALYSIS:")
+            lines.add("  Metallic detected: ${if (pipelineResult.colorPreFilterPassed) "YES" else "NO"}")
+            pipelineResult.materialScore?.let { m ->
+                lines.add("  Material: ${m.predicted.uppercase()} (gold: ${m.goldScore.toInt()}%, silver: ${m.silverScore.toInt()}%)")
+            }
+            
+            if (pipelineResult.notes.isNotEmpty()) {
+                lines.add("\nNOTES:")
+                pipelineResult.notes.take(3).forEach { note ->
+                    lines.add("  • ${sanitizeConsumerText(note)}")
+                }
+            }
+        }
+        
+        lines.add("\nNext steps:")
+        lines.add("• Tap 'Force Save' to submit anyway")
+        lines.add("• Or 'Retake' and try:")
+        lines.add("  - Better lighting")
+        lines.add("  - Centered item")
+        lines.add("  - Steady camera")
+        
+        return lines.joinToString("\n")
     }
 
     private fun verifyStampMaterialConsistency(
@@ -374,7 +555,7 @@ class UploadFragment : Fragment() {
             payload.qualityScore.coerceIn(0, 100)
         }
         val expectedWeightEstimation = estimateExpectedWeightScore01(pipelineAnalysis?.detections.orEmpty())
-        val stampPassesThreshold = stampResult?.detected == true && stampResult.confidence >= 70
+        val stampPassesThreshold = stampResult?.detected == true && stampResult.confidence >= 50
         val stampMaterialVerified = verifyStampMaterialConsistency(
             stampResult?.normalizedStamp,
             pipelineAnalysis?.materialScore
@@ -386,12 +567,8 @@ class UploadFragment : Fragment() {
             else -> payload.purity?.ifBlank { "Unknown" } ?: "Unknown"
         }
         val sourceHash = sha256(selectedDataUri.orEmpty())
-        val selectedModel = ModelPreferenceManager.getSelectedModel(requireContext())
-        val usedModelLabel = if (pipelineAnalysis?.yoloStatus?.contains("fallback", ignoreCase = true) == true) {
-            "YOLOv8n (fallback)"
-        } else {
-            selectedModel.label
-        }
+        val usingCompatibilityScan = pipelineAnalysis?.yoloStatus?.contains("fallback", ignoreCase = true) == true
+        val usedModelLabel = if (usingCompatibilityScan) "Compatibility scan mode" else "Standard scan mode"
 
         val explainability = if (hasComponentScores) {
             val brightness = String.format("%.1f", report.brightnessMean)
@@ -399,10 +576,10 @@ class UploadFragment : Fragment() {
             val sharpness = String.format("%.1f", report.sharpnessVariance)
             val weight = String.format("%.2f", expectedWeightEstimation)
             buildList {
-                add("Model used: $usedModelLabel")
-                add("Detection Strength: $detectionClamped/100 (how confidently the item was detected)")
-                add("Texture Similarity: $textureClamped/100 (how much it resembles known references)")
-                add("Pattern Similarity: $keypointClamped/100 (how well patterns match known items)")
+                add("Scan mode: $usedModelLabel")
+                add("Item visibility score: $detectionClamped/100")
+                add("Surface detail score: $textureClamped/100")
+                add("Pattern clarity score: $keypointClamped/100")
                 add("Visual Likelihood: $visualLikelihood% (average of the three scores above)")
                 add("Capture quality: brightness $brightness, contrast $contrast, sharpness $sharpness")
                 add("Expected weight estimation (0-1 scale): $weight")
@@ -412,7 +589,13 @@ class UploadFragment : Fragment() {
                 }
 
                 if (pipelineAnalysis != null) {
-                    add("Pipeline status: YOLO=${pipelineAnalysis.yoloStatus}; Grader=${pipelineAnalysis.graderStatus}")
+                    val scanState = if (pipelineAnalysis.yoloStatus.contains("fallback", ignoreCase = true)) {
+                        "Compatibility mode"
+                    } else {
+                        "Standard mode"
+                    }
+                    add("Scan status: $scanState")
+                    add("Matching status: ${pipelineAnalysis.graderStatus}")
                     add("Detections found: ${pipelineAnalysis.detections.size}")
                     if (pipelineAnalysis.laidDownRefinementApplied) {
                         add("Laid-down refinement: applied")
@@ -421,13 +604,16 @@ class UploadFragment : Fragment() {
                         add("Top reference match: ${top.referenceName} (score=${"%.3f".format(top.finalScore)})")
                     }
                     if (pipelineAnalysis.notes.isNotEmpty()) {
-                        add("Pipeline notes: ${pipelineAnalysis.notes.joinToString(separator = " | ")}")
+                        val cleanNotes = pipelineAnalysis.notes
+                            .map { sanitizeConsumerText(it) }
+                            .joinToString(separator = " | ")
+                        add("Scan notes: $cleanNotes")
                     }
                 }
             }
         } else {
             listOf(
-                "Algorithm component scores are unavailable for this result.",
+                "Detailed quality components are unavailable for this result.",
                 "Final score uses overall quality estimate = $visualLikelihood/100",
                 "Capture metrics: brightness ${"%.1f".format(report.brightnessMean)}, contrast ${"%.1f".format(report.contrastStdDev)}, sharpness ${"%.1f".format(report.sharpnessVariance)}",
                 "Expected weight estimation (0-1): ${"%.2f".format(expectedWeightEstimation)}"
@@ -549,6 +735,15 @@ class UploadFragment : Fragment() {
         val confidence = top.score.coerceIn(0f, 1f)
         val score = (0.65f * areaNorm.coerceIn(0f, 1f)) + (0.35f * confidence)
         return score.coerceIn(0f, 1f)
+    }
+
+    private fun sanitizeConsumerText(text: String): String {
+        return text
+            .replace("YOLO", "scanner", ignoreCase = true)
+            .replace("LBP", "surface detail", ignoreCase = true)
+            .replace("ORB", "pattern clarity", ignoreCase = true)
+            .replace("pipeline", "scan flow", ignoreCase = true)
+            .replace("model", "scan mode", ignoreCase = true)
     }
 
     private fun sha256(text: String): String {

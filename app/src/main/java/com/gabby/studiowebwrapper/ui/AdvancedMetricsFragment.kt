@@ -131,7 +131,7 @@ class AdvancedMetricsFragment : Fragment() {
                     append("- Detections: $detectionCount\n")
                     append("- Top detection: $topDetectionLabel\n")
                     append("- YOLO score: $yolo/100 | LBP: $lbp/100 | ORB: $orb/100\n")
-                    append("- Stamp OCR: ")
+                    append("- Karat stamp OCR: ")
                     if (result.stampDetected && !result.stampText.isNullOrBlank()) {
                         append("${result.stampText} (${result.stampConfidence}%)\n")
                     } else {
@@ -145,7 +145,7 @@ class AdvancedMetricsFragment : Fragment() {
                 rescanSuggestionsText.text = buildRescanSuggestionsText(result, total)
 
                 val band = likelihoodBandForScore(total)
-                tierBadgeText.text = "$band Likelihood"
+                tierBadgeText.text = "Match level: $band"
                 tierBadgeText.setBackgroundResource(badgeBackgroundForBand(band))
                 expectedWeightText.text = result.expectedWeightGrams?.let { String.format("≈ %.2f g", it) } ?: "N/A"
 
@@ -207,37 +207,37 @@ class AdvancedMetricsFragment : Fragment() {
 
     private fun likelihoodBandForScore(score: Int): String {
         return when {
-            score >= 85 -> "Very High"
-            score >= 70 -> "High"
-            score >= 55 -> "Moderate"
-            else -> "Low"
+            score >= 85 -> "Very Close Match"
+            score >= 70 -> "Close Match"
+            score >= 55 -> "Some Similarity"
+            else -> "Low Match"
         }
     }
 
     private fun badgeBackgroundForBand(band: String): Int {
         return when (band) {
-            "Very High" -> R.drawable.bg_badge_tier_a
-            "High" -> R.drawable.bg_badge_tier_b
-            "Moderate" -> R.drawable.bg_badge_tier_c
+            "Very Close Match" -> R.drawable.bg_badge_tier_a
+            "Close Match" -> R.drawable.bg_badge_tier_b
+            "Some Similarity" -> R.drawable.bg_badge_tier_c
             else -> R.drawable.bg_badge_tier_d
         }
     }
 
     private fun gradingCriteriaText(): String {
-        return "Likelihood Guide\n" +
-            "Very High: overall score >= 85%\n" +
-            "High: overall score >= 70%\n" +
-            "Moderate: overall score >= 55%\n" +
-            "Low: overall score < 55%\n\n" +
-            "This is a similarity likelihood estimate, not an authenticity verdict."
+        return "Quick guide\n" +
+            "Very Close Match: overall score >= 85%\n" +
+            "Close Match: overall score >= 70%\n" +
+            "Some Similarity: overall score >= 55%\n" +
+            "Low Match: overall score < 55%\n\n" +
+            "This is a photo-based similarity estimate."
     }
 
     private fun resolvedStampLabel(result: SuggestMetadataOutput): String {
         val purity = result.purity?.ifBlank { "Unknown" } ?: "Unknown"
         return if (result.stampDetected && !result.stampText.isNullOrBlank()) {
-            "$purity (${result.stampText}, OCR ${result.stampConfidence}%)"
+            "$purity (karat stamp: ${result.stampText}, OCR ${result.stampConfidence}%)"
         } else {
-            "$purity (no reliable stamp evidence)"
+            "$purity (no clear karat stamp)"
         }
     }
 
@@ -400,13 +400,13 @@ class AdvancedMetricsFragment : Fragment() {
                 "LBP texture similarity: $lbp/100",
                 "ORB keypoint matching: $orb/100",
                 "Overall likelihood formula: avg(YOLO, LBP, ORB) = $total%",
-                "This score estimates visual similarity only; it is not an authenticity claim."
+                "This score estimates visual similarity from the photo only."
             )
         } else {
             listOf(
                 "Algorithm component scores are unavailable for this result.",
                 "Overall likelihood uses quality estimate = $total%.",
-                "This score estimates visual similarity only; it is not an authenticity claim."
+                "This score estimates visual similarity from the photo only."
             )
         }
         return fallbackLines.joinToString(separator = "\n", prefix = "- ")

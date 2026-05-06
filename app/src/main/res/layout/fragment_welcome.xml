@@ -27,7 +27,7 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="12dp"
             android:gravity="center"
-            android:text="Welcome to Jewel Grade. Grade your Jewelry through computer vision and find the original or similar products."
+            android:text="Welcome to Jewel Grade. Take a jewelry photo, get a beginner-friendly match estimate, and review the result in plain language."
             android:textAppearance="@style/TextAppearance.Material3.BodyLarge"
             android:textColor="@color/jg_text_secondary" />
 

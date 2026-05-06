@@ -210,7 +210,7 @@ object MaterialClassifier {
             if (isMetallic) validJewelryPixels++
         }
 
-        // At least 20% of image should look metallic
-        return validJewelryPixels > (pixels.size * 0.2f)
+        // At least ~10% of image should look metallic (further relaxed)
+        return validJewelryPixels > (pixels.size * 0.10f)
     }
 }

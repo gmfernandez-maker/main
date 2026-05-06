@@ -337,9 +337,11 @@ class YoloInference(
 
     private fun isReasonableDetectionSet(detections: List<Detection>): Boolean {
         if (detections.isEmpty()) return false
-        if (detections.size > 10) return false
+        // Allow up to 30 detections before rejecting (was 20)
+        if (detections.size > 30) return false
 
-        val hasStrongDetection = detections.any { it.score >= 0.45f }
+        // Require at least one moderately confident detection (lowered from 0.30)
+        val hasStrongDetection = detections.any { it.score >= 0.25f }
         if (!hasStrongDetection) return false
 
         return detections.all { det ->
@@ -350,7 +352,8 @@ class YoloInference(
                 det.x1 >= 0f && det.y1 >= 0f &&
                 det.x2 <= inputSize.toFloat() * 1.05f &&
                 det.y2 <= inputSize.toFloat() * 1.05f &&
-                (((det.x2 - det.x1) * (det.y2 - det.y1)) / (inputSize.toFloat() * inputSize.toFloat())) in 0.0003f..0.95f
+                // Allow very small boxes (down to ~0.00005 of model area) to handle small centered rings
+                (((det.x2 - det.x1) * (det.y2 - det.y1)) / (inputSize.toFloat() * inputSize.toFloat())) in 0.00005f..0.95f
         }
     }
 

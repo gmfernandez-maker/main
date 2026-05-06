@@ -91,17 +91,24 @@ class HomeFragment : Fragment() {
                 Log.e("HomeFragment", "Failed to load recent preview: $previewUri", e)
                 recentPreviewImage.setImageDrawable(null)
             }
-            recentScoreText.text = "${result.qualityScore}/100"
+            recentScoreText.text = "${result.qualityScore.coerceIn(0, 100)}%"
             val purity = result.purity?.ifBlank { "Unknown" } ?: "Unknown"
             val hasStampEvidence = result.stampDetected && !result.stampText.isNullOrBlank()
-            recentMaterialText.text = if (hasStampEvidence) {
-                "$purity (${result.stampText}, ${result.stampConfidence}%)"
-            } else {
-                "$purity (No Stamp Evidence)"
-            }
+            recentMaterialText.text = purity
             recentMaterialText.setBackgroundResource(if (hasStampEvidence) R.drawable.bg_badge_tier_a else R.drawable.bg_badge_tier_d)
             recentMaterialText.setTextColor(resources.getColor(if (hasStampEvidence) R.color.jg_gold_light else R.color.jg_text_secondary, null))
-            recentAnalysisText.text = result.analysis
+            val jewelryType = result.material.ifBlank { "Item" }
+            val stampSummary = if (hasStampEvidence) {
+                "${result.stampText} (${result.stampConfidence}%)"
+            } else {
+                "No clear karat stamp"
+            }
+            recentAnalysisText.text = buildString {
+                append("• Type: $jewelryType\n")
+                append("• Karat estimate: $purity\n")
+                append("• Stamp: $stampSummary\n")
+                append("• Note: This is a visual estimate, not a certification.")
+            }
         }
     }
 
@@ -127,9 +134,9 @@ class HomeFragment : Fragment() {
                         val score = parsed.qualityScore
                         val karat = parsed.purity?.ifBlank { "Unknown" } ?: "Unknown"
                         val stampLabel = if (parsed.stampDetected && !parsed.stampText.isNullOrBlank()) {
-                            "${parsed.stampText} (${parsed.stampConfidence}%)"
+                            "karat stamp: ${parsed.stampText} (${parsed.stampConfidence}%)"
                         } else {
-                            "No Stamp Evidence"
+                            "No clear karat stamp"
                         }
                         val title = DateFormat.getDateTimeInstance(DateFormat.SHORT, DateFormat.SHORT)
                             .format(Date(entry.timestamp))
@@ -236,7 +243,7 @@ class HomeFragment : Fragment() {
             ).apply {
                 topMargin = 8
             }
-            text = "YOLOv8 Score: ${resultData["score"] ?: "N/A"}"
+            text = "Quality Score: ${resultData["score"] ?: "N/A"}%"
             setTextColor(resources.getColor(R.color.jg_text_primary, null))
             textSize = 12.5f
         }

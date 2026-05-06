@@ -107,19 +107,19 @@ object ImageUtils {
         val warnings = mutableListOf<String>()
 
         val minEdge = min(bitmap.width, bitmap.height)
-        if (minEdge < 180) {
-            blocking += "Resolution is too low. Use an image at least 180px on the shortest side."
+        if (minEdge < 80) {
+            blocking += "Resolution is too low. Use an image at least 80px on the shortest side."
         } else if (minEdge < 360) {
             warnings += "Image resolution is modest. A larger photo will improve grading accuracy."
         }
 
-        if (sharpnessVar < 5.0) {
+        if (sharpnessVar < 1.0) {
             blocking += "Image is too blurry for reliable grading."
         } else if (sharpnessVar < 40.0) {
             warnings += "Slight blur detected. Hold the phone steady and tap to focus."
         }
 
-        if (mean < 12.0) {
+        if (mean < 5.0) {
             blocking += "Image is too dark. Add more light before grading."
         } else if (mean < 45.0) {
             warnings += "Lighting is dim. Better lighting will improve accuracy."

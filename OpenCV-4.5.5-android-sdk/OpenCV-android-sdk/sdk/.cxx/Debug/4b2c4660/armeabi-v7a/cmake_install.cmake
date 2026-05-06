@@ -1,4 +1,4 @@
-# Install script for directory: C:/Users/Gabby/OneDrive/Desktop/Thesis_Android - Copy/kotlin-webwrapper/OpenCV-4.5.5-android-sdk/OpenCV-android-sdk/sdk/libcxx_helper
+# Install script for directory: C:/Users/Gabby/OneDrive/Desktop/PixelPioneers/main/OpenCV-4.5.5-android-sdk/OpenCV-android-sdk/sdk/libcxx_helper
 
 # Set the install prefix
 if(NOT DEFINED CMAKE_INSTALL_PREFIX)
@@ -50,5 +50,5 @@ endif()
 
 string(REPLACE ";" "\n" CMAKE_INSTALL_MANIFEST_CONTENT
        "${CMAKE_INSTALL_MANIFEST_FILES}")
-file(WRITE "C:/Users/Gabby/OneDrive/Desktop/Thesis_Android - Copy/kotlin-webwrapper/OpenCV-4.5.5-android-sdk/OpenCV-android-sdk/sdk/.cxx/Debug/4b2c4660/armeabi-v7a/${CMAKE_INSTALL_MANIFEST}"
+file(WRITE "C:/Users/Gabby/OneDrive/Desktop/PixelPioneers/main/OpenCV-4.5.5-android-sdk/OpenCV-android-sdk/sdk/.cxx/Debug/4b2c4660/armeabi-v7a/${CMAKE_INSTALL_MANIFEST}"
      "${CMAKE_INSTALL_MANIFEST_CONTENT}")

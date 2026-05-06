@@ -49,9 +49,6 @@ class VanillaVisionPipeline(
     private var grader: Grader? = null
     private var graderStatus: String = "Not initialized"
 
-    // Only accept detections whose center falls within the middle window of the frame.
-    private val centerKeepRatio = 0.55f
-
     private fun ensureYolo(): YoloInference? {
         if (!yoloAttempted) {
             yoloAttempted = true
@@ -302,15 +299,13 @@ class VanillaVisionPipeline(
         return try {
             val output = detector.run(bitmap)
             val threshold = when (ModelPreferenceManager.getSelectedModel(context)) {
-                ModelVariant.NANO -> 0.40f
-                ModelVariant.SMALL -> 0.45f
+                // Lower confidence thresholds to be more permissive with detections
+                ModelVariant.NANO -> 0.25f
+                ModelVariant.SMALL -> 0.30f
             }
             val parsed = detector.parseDetections(output, threshold)
-            val centerOnly = parsed.filter { isDetectionCentered(bitmap, it, centerKeepRatio) }
-            if (parsed.isNotEmpty() && centerOnly.isEmpty()) {
-                notes.add("Detected object is outside the center guide window; recapture with item centered.")
-            }
-            centerOnly
+            // Accept all detections regardless of position (center filter removed for better flexibility)
+            parsed
         } catch (_: Throwable) {
             notes.add("YOLO inference failed for this frame.")
             emptyList()

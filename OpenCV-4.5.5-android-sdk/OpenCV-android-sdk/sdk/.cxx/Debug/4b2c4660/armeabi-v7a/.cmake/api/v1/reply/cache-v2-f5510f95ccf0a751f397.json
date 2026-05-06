@@ -163,7 +163,7 @@
 				}
 			],
 			"type" : "INTERNAL",
-			"value" : "c:/Users/Gabby/OneDrive/Desktop/Thesis_Android - Copy/kotlin-webwrapper/OpenCV-4.5.5-android-sdk/OpenCV-android-sdk/sdk/.cxx/Debug/4b2c4660/armeabi-v7a"
+			"value" : "c:/Users/Gabby/OneDrive/Desktop/PixelPioneers/main/OpenCV-4.5.5-android-sdk/OpenCV-android-sdk/sdk/.cxx/Debug/4b2c4660/armeabi-v7a"
 		},
 		{
 			"name" : "CMAKE_CACHE_MAJOR_VERSION",
@@ -715,7 +715,7 @@
 				}
 			],
 			"type" : "INTERNAL",
-			"value" : "C:/Users/Gabby/OneDrive/Desktop/Thesis_Android - Copy/kotlin-webwrapper/OpenCV-4.5.5-android-sdk/OpenCV-android-sdk/sdk/libcxx_helper"
+			"value" : "C:/Users/Gabby/OneDrive/Desktop/PixelPioneers/main/OpenCV-4.5.5-android-sdk/OpenCV-android-sdk/sdk/libcxx_helper"
 		},
 		{
 			"name" : "CMAKE_INSTALL_PREFIX",
@@ -751,7 +751,7 @@
 				}
 			],
 			"type" : "UNINITIALIZED",
-			"value" : "C:\\Users\\Gabby\\OneDrive\\Desktop\\Thesis_Android - Copy\\kotlin-webwrapper\\OpenCV-4.5.5-android-sdk\\OpenCV-android-sdk\\sdk\\build\\intermediates\\cxx\\Debug\\4b2c4660\\obj\\armeabi-v7a"
+			"value" : "C:\\Users\\Gabby\\OneDrive\\Desktop\\PixelPioneers\\main\\OpenCV-4.5.5-android-sdk\\OpenCV-android-sdk\\sdk\\build\\intermediates\\cxx\\Debug\\4b2c4660\\obj\\armeabi-v7a"
 		},
 		{
 			"name" : "CMAKE_LINKER",
@@ -1023,7 +1023,7 @@
 				}
 			],
 			"type" : "UNINITIALIZED",
-			"value" : "C:\\Users\\Gabby\\OneDrive\\Desktop\\Thesis_Android - Copy\\kotlin-webwrapper\\OpenCV-4.5.5-android-sdk\\OpenCV-android-sdk\\sdk\\build\\intermediates\\cxx\\Debug\\4b2c4660\\obj\\armeabi-v7a"
+			"value" : "C:\\Users\\Gabby\\OneDrive\\Desktop\\PixelPioneers\\main\\OpenCV-4.5.5-android-sdk\\OpenCV-android-sdk\\sdk\\build\\intermediates\\cxx\\Debug\\4b2c4660\\obj\\armeabi-v7a"
 		},
 		{
 			"name" : "CMAKE_SHARED_LINKER_FLAGS",
@@ -1295,7 +1295,7 @@
 				}
 			],
 			"type" : "STATIC",
-			"value" : "C:/Users/Gabby/OneDrive/Desktop/Thesis_Android - Copy/kotlin-webwrapper/OpenCV-4.5.5-android-sdk/OpenCV-android-sdk/sdk/.cxx/Debug/4b2c4660/armeabi-v7a"
+			"value" : "C:/Users/Gabby/OneDrive/Desktop/PixelPioneers/main/OpenCV-4.5.5-android-sdk/OpenCV-android-sdk/sdk/.cxx/Debug/4b2c4660/armeabi-v7a"
 		},
 		{
 			"name" : "Project_IS_TOP_LEVEL",
@@ -1319,7 +1319,7 @@
 				}
 			],
 			"type" : "STATIC",
-			"value" : "C:/Users/Gabby/OneDrive/Desktop/Thesis_Android - Copy/kotlin-webwrapper/OpenCV-4.5.5-android-sdk/OpenCV-android-sdk/sdk/libcxx_helper"
+			"value" : "C:/Users/Gabby/OneDrive/Desktop/PixelPioneers/main/OpenCV-4.5.5-android-sdk/OpenCV-android-sdk/sdk/libcxx_helper"
 		}
 	],
 	"kind" : "cache",

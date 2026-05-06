@@ -1,6 +1,8 @@
 package com.gabby.studiowebwrapper
 
+import android.content.Context
 import android.os.Bundle
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import com.gabby.studiowebwrapper.databinding.ActivityMainBinding
 import com.gabby.studiowebwrapper.data.NativeRepository
@@ -44,12 +46,15 @@ class MainActivity : AppCompatActivity(),
     private lateinit var binding: ActivityMainBinding
     private lateinit var bottomNav: BottomNavigationView
     private val BOTTOM_VIS_KEY = "bottom_nav_visibility"
+    private val STARTUP_DISCLAIMER_KEY = "startup_disclaimer_acknowledged"
 
     override fun onCreate(savedInstanceState: Bundle?) {
         ThemeModeManager.applySavedTheme(this)
         super.onCreate(savedInstanceState)
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
+
+        showStartupDisclaimerIfNeeded()
 
         bottomNav = binding.bottomNavigation
         // Restore bottom nav visibility across recreation (theme switch)
@@ -165,23 +170,32 @@ class MainActivity : AppCompatActivity(),
                         NativeRepository.syncHistoryEntryToSupabase(this@MainActivity, entry)
                     }
 
-                    // navigate back to home on main thread
+                    // Open the result screen on main thread
                     launch(Dispatchers.Main) {
                         if (isDuplicate) {
                             Toast.makeText(this@MainActivity, "Duplicate submission ignored.", Toast.LENGTH_SHORT).show()
                         }
-                        safeReplaceFragment(HomeFragment.newInstanceWithResult(Gson().toJson(result), previewPath), addToBackStack = false)
+                        safeReplaceFragment(
+                            GradeResultFragment.newInstance(Gson().toJson(result), previewPath),
+                            addToBackStack = false
+                        )
                     }
                 } catch (e: Exception) {
-                    // fallback: navigate with original data URI if thumbnail failed
+                    // Fallback: navigate with original data URI if thumbnail save failed.
                     launch(Dispatchers.Main) {
-                        safeReplaceFragment(HomeFragment.newInstanceWithResult(Gson().toJson(result), previewDataUri), addToBackStack = false)
+                        safeReplaceFragment(
+                            GradeResultFragment.newInstance(Gson().toJson(result), previewDataUri),
+                            addToBackStack = false
+                        )
                     }
                 }
             }
         } catch (e: Exception) {
-            // final fallback
-            safeReplaceFragment(HomeFragment.newInstanceWithResult(Gson().toJson(result), previewDataUri), addToBackStack = false)
+            // Final fallback.
+            safeReplaceFragment(
+                GradeResultFragment.newInstance(Gson().toJson(result), previewDataUri),
+                addToBackStack = false
+            )
         }
     }
 
@@ -213,5 +227,22 @@ class MainActivity : AppCompatActivity(),
     override fun onSaveInstanceState(outState: Bundle) {
         super.onSaveInstanceState(outState)
         outState.putInt(BOTTOM_VIS_KEY, bottomNav.visibility)
+    }
+
+    private fun showStartupDisclaimerIfNeeded() {
+        val prefs = getSharedPreferences("app_ui", Context.MODE_PRIVATE)
+        if (prefs.getBoolean(STARTUP_DISCLAIMER_KEY, false)) return
+
+        AlertDialog.Builder(this)
+            .setTitle("Before you start")
+            .setMessage(
+                "This app gives a photo-based estimate of how a jewelry item compares to known examples. " +
+                    "It can also look for a visible karat stamp. The result is helpful guidance, not a certified appraisal or purity guarantee."
+            )
+            .setCancelable(false)
+            .setPositiveButton("I understand") { _, _ ->
+                prefs.edit().putBoolean(STARTUP_DISCLAIMER_KEY, true).apply()
+            }
+            .show()
     }
 }

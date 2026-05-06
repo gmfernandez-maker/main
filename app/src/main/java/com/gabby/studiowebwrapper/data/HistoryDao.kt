@@ -20,6 +20,12 @@ interface HistoryDao {
     @Query("SELECT COUNT(*) FROM history WHERE userId = :userId AND sourceHash = :sourceHash")
     fun countByUserAndSourceHash(userId: String, sourceHash: String): Int
 
+    @Query("SELECT * FROM history WHERE userId = :userId AND sourceHash = :sourceHash ORDER BY timestamp DESC LIMIT 1")
+    fun findLatestByUserAndSourceHash(userId: String, sourceHash: String): HistoryEntry?
+
+    @Query("SELECT * FROM history WHERE userId = :userId AND previewUri = :previewUri ORDER BY timestamp DESC LIMIT 1")
+    fun findLatestByUserAndPreviewUri(userId: String, previewUri: String): HistoryEntry?
+
     @Insert(onConflict = androidx.room.OnConflictStrategy.REPLACE)
     fun insert(entry: HistoryEntry): Long
 

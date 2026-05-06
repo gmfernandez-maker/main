@@ -23,12 +23,16 @@ import com.google.android.material.snackbar.Snackbar
 import androidx.fragment.app.Fragment
 import coil.load
 import com.gabby.studiowebwrapper.R
+import com.gabby.studiowebwrapper.data.AppDatabase
+import com.gabby.studiowebwrapper.data.NativeRepository
 import com.gabby.studiowebwrapper.databinding.FragmentGradeResultBinding
 import com.gabby.studiowebwrapper.model.SuggestMetadataOutput
 import com.gabby.studiowebwrapper.model.YoloDetectionOutput
 import com.gabby.studiowebwrapper.util.ImageUtils
 import com.gabby.studiowebwrapper.util.YoloLabels
 import com.google.gson.Gson
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 class GradeResultFragment : Fragment() {
     private var originalPreviewBitmap: Bitmap? = null
@@ -55,19 +59,19 @@ class GradeResultFragment : Fragment() {
 
     private fun likelihoodBandForScore(score: Int): String {
         return when {
-            score >= 85 -> "Very High Similarity"
-            score >= 70 -> "High Similarity"
-            score >= 55 -> "Moderate Similarity"
-            else -> "Low Similarity"
+            score >= 85 -> "Very Close Match"
+            score >= 70 -> "Close Match"
+            score >= 55 -> "Some Similarity"
+            else -> "Low Match"
         }
     }
 
     private fun likelihoodBandDescription(band: String): String {
         return when (band) {
-            "Very High Similarity" -> "This item looks very similar to known gold jewelry in our database."
-            "High Similarity" -> "This item shows good similarity to known gold jewelry."
-            "Moderate Similarity" -> "This item has some similarities to known gold jewelry, but verification is recommended."
-            else -> "This item shows limited similarity to known gold jewelry. Professional inspection recommended."
+            "Very Close Match" -> "The photo looks very similar to items the app has seen before."
+            "Close Match" -> "The photo matches known examples fairly well."
+            "Some Similarity" -> "The photo shares some features with known examples, but it is less certain."
+            else -> "The photo does not look very close to the known examples."
         }
     }
 
@@ -81,13 +85,12 @@ class GradeResultFragment : Fragment() {
     }
 
     private fun gradingCriteriaText(): String {
-        return "This app analyzes jewelry using AI image recognition to compare it against known gold items.\n\n" +
-            "Similarity Guide\n" +
-            "Very High: 85%+ - Item looks very similar to known gold jewelry\n" +
-            "High: 70-84% - Item shows strong similarity to known gold jewelry\n" +
-            "Moderate: 55-69% - Item has some similarities but may need verification\n" +
-            "Low: Below 55% - Item looks quite different from known gold jewelry\n\n" +
-            "⚠️ IMPORTANT: This is a visual similarity estimate ONLY. It is not an authenticity certification, professional appraisal, or guarantee of gold purity. Always consult a professional jeweler for valuable items or transactions."
+        return "Simple guide\n" +
+            "Very Close Match: 85%+\n" +
+            "Close Match: 70-84%\n" +
+            "Some Similarity: 55-69%\n" +
+            "Low Match: below 55%\n\n" +
+            "This is a photo-based estimate, not a certified appraisal."
     }
 
     interface Callbacks {
@@ -171,25 +174,30 @@ class GradeResultFragment : Fragment() {
                 val bandDescription = likelihoodBandDescription(band)
                 
                 // Main score display - user-friendly
-                totalScoreText.text = "Visual Similarity: $total%"
+                totalScoreText.text = "How close it looks: $total%"
                 overallScoreBar.progress = total
 
                 // Assessment level badge
-                tierBadgeText.text = "Assessment: $band"
+                tierBadgeText.text = "Match level: $band"
                 tierBadgeText.setBackgroundResource(badgeBackgroundForBand(band))
 
                 val topDetection = result.yoloDetections.orEmpty().maxByOrNull { it.score }
                 val itemType = topDetection?.let { YoloLabels.labelForClassId(it.classId) } ?: "Unknown"
-                itemTypeText.text = "Item Type Detected: $itemType"
-                modelUsedText.text = "Analysis Tool: ${result.yoloModelUsed ?: "Unknown"}"
+                itemTypeText.text = "Detected item: $itemType"
+                val rawMode = result.yoloModelUsed.orEmpty()
+                val consumerMode = if (rawMode.contains("fallback", ignoreCase = true)) {
+                    "Compatibility mode"
+                } else if (rawMode.isBlank()) {
+                    "Standard mode"
+                } else {
+                    "Standard mode"
+                }
+                modelUsedText.text = "Scan mode: $consumerMode"
 
                 materialText.text = resolvedStampLabel(result)
                 karatBasisText.text = resolvedStampBasis(result)
                 analysisText.text = buildUserFacingAnalysis(result, total)
                 
-                // Professional appraiser disclaimer
-                binding?.disclaimerText?.text = "⚠️ Disclaimer: This app provides visual similarity analysis only. It is NOT a professional appraisal, authenticity certification, or guarantee of gold purity. Before buying, selling, or trading jewelry, always have it inspected by a certified professional jeweler or appraiser."
-
                 advancedMetricsButton.setOnClickListener {
                     callbacks?.openAdvancedMetrics(Gson().toJson(result), previewDataUri)
                 }
@@ -360,7 +368,7 @@ class GradeResultFragment : Fragment() {
     private fun applyStampCloseupResult(stamp: com.gabby.studiowebwrapper.util.StampOcrResult) {
         val prev = currentResult ?: return
         val prevTotal = computedTotalScore(prev)
-        val stampDetected = stamp.detected && (stamp.confidence >= 70f)
+        val stampDetected = stamp.detected && (stamp.confidence >= 50f)
         var updated = prev.copy()
         if (stampDetected) {
             updated = updated.copy(
@@ -373,17 +381,10 @@ class GradeResultFragment : Fragment() {
         updated = updated.copy(qualityScore = newTotal, totalComputedScore = newTotal)
         currentResult = updated
 
-        // Animate progress and update the score label with delta
-        binding?.let { b ->
-            val target = updated.totalComputedScore
-            ObjectAnimator.ofInt(b.overallScoreBar, "progress", prevTotal, target).setDuration(600).start()
-            val delta = target - prevTotal
-            val deltaStr = if (delta > 0) "+$delta" else if (delta < 0) "$delta" else "+0"
-            b.totalScoreText.text = "Visual Similarity: $target% ($deltaStr)"
-            b.materialText.text = if (!updated.stampText.isNullOrEmpty()) updated.stampText else "Unknown"
-            b.karatBasisText.text = if (updated.stampDetected) "Stamp detected" else "No stamp"
-            b.analysisText.text = buildUserFacingAnalysis(updated, target)
-            b.rescanSuggestionsText.text = if (target < 50) "Consider adding stamp closeup or better lighting." else "No further action needed."
+        updateUiWithResult(updated, previousScore = prevTotal)
+
+        viewLifecycleOwner.lifecycleScope.launch {
+            persistUpdatedHistoryEntry(updated)
         }
 
         // Show transient confirmation snackbar with details
@@ -396,14 +397,51 @@ class GradeResultFragment : Fragment() {
         Snackbar.make(root, snackMsg, Snackbar.LENGTH_LONG).show()
     }
 
-    private fun updateUiWithResult(result: SuggestMetadataOutput) {
+    private suspend fun persistUpdatedHistoryEntry(updated: SuggestMetadataOutput) {
+        val context = context ?: return
+        val userId = NativeRepository.getCurrentUser(context)?.id.orEmpty()
+        if (userId.isBlank()) return
+
+        val previewRef = arguments?.getString(ARG_PREVIEW_DATA_URI).orEmpty()
+        if (previewRef.isBlank() && updated.sourceHash.isNullOrBlank()) return
+
+        withContext(Dispatchers.IO) {
+            val dao = AppDatabase.getInstance(context).historyDao()
+            val existing = if (!updated.sourceHash.isNullOrBlank()) {
+                dao.findLatestByUserAndSourceHash(userId, updated.sourceHash)
+            } else {
+                dao.findLatestByUserAndPreviewUri(userId, previewRef)
+            } ?: return@withContext
+
+            val merged = existing.copy(
+                sourceHash = updated.sourceHash ?: existing.sourceHash,
+                resultJson = Gson().toJson(updated)
+            )
+            dao.insert(merged)
+        }
+    }
+
+    private fun updateUiWithResult(result: SuggestMetadataOutput, previousScore: Int? = null) {
         binding?.apply {
-            totalScoreText.text = "Visual Similarity: ${result.totalComputedScore}%"
-            overallScoreBar.progress = result.totalComputedScore
-            materialText.text = if (!result.stampText.isNullOrEmpty()) result.stampText else "Unknown"
-            karatBasisText.text = if (result.stampDetected) "Stamp detected" else "No stamp"
-            analysisText.text = buildUserFacingAnalysis(result, result.totalComputedScore)
-            rescanSuggestionsText.text = if (result.totalComputedScore < 50) "Consider adding stamp closeup or better lighting." else "No further action needed."
+            val total = computedTotalScore(result)
+            val band = likelihoodBandForScore(total)
+            tierBadgeText.text = "Match level: $band"
+            tierBadgeText.setBackgroundResource(badgeBackgroundForBand(band))
+
+            if (previousScore != null) {
+                ObjectAnimator.ofInt(overallScoreBar, "progress", previousScore, total).setDuration(600).start()
+                val delta = total - previousScore
+                val deltaStr = if (delta > 0) "+$delta" else if (delta < 0) "$delta" else "+0"
+                totalScoreText.text = "How close it looks: $total% ($deltaStr)"
+            } else {
+                overallScoreBar.progress = total
+                totalScoreText.text = "How close it looks: $total%"
+            }
+
+            materialText.text = resolvedStampLabel(result)
+            karatBasisText.text = resolvedStampBasis(result)
+            analysisText.text = buildUserFacingAnalysis(result, total)
+            rescanSuggestionsText.text = buildRescanSuggestionsText(result, total)
         }
     }
 
@@ -413,32 +451,32 @@ class GradeResultFragment : Fragment() {
             clampScore(result.lbpScore) == 0 &&
             clampScore(result.orbScore) == 0
         if (noStampsDetected) {
-            return "No jewelry was clearly detected in this photo. Predicted karat: Unknown. Please retake with better lighting and framing."
+            return "No jewelry was clearly detected in this photo. Karat estimate: Unknown. Please retake with better lighting and a steadier frame."
         }
 
         val purity = result.purity?.ifBlank { "Unknown" } ?: "Unknown"
         val stampNote = if (result.stampDetected && !result.stampText.isNullOrBlank()) {
-            " Based on visible stamp/hallmark: ${result.stampText}."
+            " Based on a visible karat stamp: ${result.stampText}."
         } else {
-            " Based on visual analysis (no clear stamp detected)."
+            " Based on the photo alone, since no clear karat stamp was found."
         }
-        return "Predicted karat: $purity.$stampNote\n\nRemember: Have a professional jeweler verify before any transactions."
+        return "Karat estimate: $purity.$stampNote\n\nThis is a photo-based estimate, so a jeweler can still verify it if needed."
     }
 
     private fun resolvedStampLabel(result: SuggestMetadataOutput): String {
         val purity = result.purity?.ifBlank { "Unknown" } ?: "Unknown"
         return if (result.stampDetected && !result.stampText.isNullOrBlank()) {
-            "$purity (Stamp: ${result.stampText})"
+            "$purity (karat stamp: ${result.stampText})"
         } else {
-            "$purity (No clear stamp detected)"
+            "$purity (no clear karat stamp detected)"
         }
     }
 
     private fun resolvedStampBasis(result: SuggestMetadataOutput): String {
         return if (result.stampDetected && !result.stampText.isNullOrBlank()) {
-            "Based on detected stamp: ${result.stampText} (confidence: ${result.stampConfidence}%)"
+            "Based on the visible karat stamp: ${result.stampText} (confidence: ${result.stampConfidence}%)"
         } else {
-            "Based on visual analysis without stamp evidence"
+            "Based on visual analysis without a clear karat stamp"
         }
     }
 

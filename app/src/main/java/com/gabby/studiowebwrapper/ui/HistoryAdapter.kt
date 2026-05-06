@@ -78,24 +78,24 @@ class HistoryAdapter(
         val result = try { gson.fromJson(item.resultJson, SuggestMetadataOutput::class.java) } catch (e: Exception) { null }
         val purity = result?.purity?.ifBlank { "Unknown" } ?: "Unknown"
         val material = result?.material?.ifBlank { "Item" } ?: "Item"
-        holder.title.text = "Predicted: $purity $material"
+        holder.title.text = "Estimated: $purity $material"
         holder.date.text = android.text.format.DateFormat.format("yyyy-MM-dd HH:mm", java.util.Date(item.timestamp))
         val scoreValue = result?.qualityScore
         val stampText = if (result?.stampDetected == true && !result.stampText.isNullOrBlank()) {
-            "${result.stampText} (${result.stampConfidence}%)"
+            "karat stamp: ${result.stampText} (${result.stampConfidence}%)"
         } else {
-            "No Stamp Evidence"
+            "No clear karat stamp"
         }
         val stampDetected = result?.stampDetected == true && !result.stampText.isNullOrBlank()
-        holder.score.text = scoreValue?.let { "Score: $it | Stamp: $stampText" } ?: "Score: N/A | Stamp: $stampText"
+        holder.score.text = scoreValue?.let { "Score: $it | Karat stamp: $stampText" } ?: "Score: N/A | Karat stamp: $stampText"
         if (scoreValue != null) {
             val tier = tierForScore(scoreValue)
             holder.grade.text = "Grade: $tier"
-            holder.badge.text = if (stampDetected) "Stamp Verified" else "No Stamp Evidence"
+            holder.badge.text = if (stampDetected) "Karat stamp detected" else "No clear karat stamp"
             holder.badge.setBackgroundResource(if (stampDetected) R.drawable.bg_badge_tier_a else R.drawable.bg_badge_tier_d)
         } else {
             holder.grade.text = "Grade: Unknown"
-            holder.badge.text = if (stampDetected) "Stamp Verified" else "No Stamp Evidence"
+            holder.badge.text = if (stampDetected) "Karat stamp detected" else "No clear karat stamp"
             holder.badge.setBackgroundResource(if (stampDetected) R.drawable.bg_badge_tier_a else R.drawable.bg_badge_tier_d)
         }
     }

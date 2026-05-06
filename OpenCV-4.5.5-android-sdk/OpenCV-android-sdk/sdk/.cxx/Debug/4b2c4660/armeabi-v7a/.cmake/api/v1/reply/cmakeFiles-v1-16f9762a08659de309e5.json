@@ -41,7 +41,7 @@
 		},
 		{
 			"isGenerated" : true,
-			"path" : "C:/Users/Gabby/OneDrive/Desktop/Thesis_Android - Copy/kotlin-webwrapper/OpenCV-4.5.5-android-sdk/OpenCV-android-sdk/sdk/.cxx/Debug/4b2c4660/armeabi-v7a/CMakeFiles/3.22.1-g37088a8-dirty/CMakeSystem.cmake"
+			"path" : "C:/Users/Gabby/OneDrive/Desktop/PixelPioneers/main/OpenCV-4.5.5-android-sdk/OpenCV-android-sdk/sdk/.cxx/Debug/4b2c4660/armeabi-v7a/CMakeFiles/3.22.1-g37088a8-dirty/CMakeSystem.cmake"
 		},
 		{
 			"isExternal" : true,
@@ -307,7 +307,7 @@
 		},
 		{
 			"isGenerated" : true,
-			"path" : "C:/Users/Gabby/OneDrive/Desktop/Thesis_Android - Copy/kotlin-webwrapper/OpenCV-4.5.5-android-sdk/OpenCV-android-sdk/sdk/.cxx/Debug/4b2c4660/armeabi-v7a/CMakeFiles/3.22.1-g37088a8-dirty/CMakeCCompiler.cmake"
+			"path" : "C:/Users/Gabby/OneDrive/Desktop/PixelPioneers/main/OpenCV-4.5.5-android-sdk/OpenCV-android-sdk/sdk/.cxx/Debug/4b2c4660/armeabi-v7a/CMakeFiles/3.22.1-g37088a8-dirty/CMakeCCompiler.cmake"
 		},
 		{
 			"isCMake" : true,
@@ -541,7 +541,7 @@
 		},
 		{
 			"isGenerated" : true,
-			"path" : "C:/Users/Gabby/OneDrive/Desktop/Thesis_Android - Copy/kotlin-webwrapper/OpenCV-4.5.5-android-sdk/OpenCV-android-sdk/sdk/.cxx/Debug/4b2c4660/armeabi-v7a/CMakeFiles/3.22.1-g37088a8-dirty/CMakeCXXCompiler.cmake"
+			"path" : "C:/Users/Gabby/OneDrive/Desktop/PixelPioneers/main/OpenCV-4.5.5-android-sdk/OpenCV-android-sdk/sdk/.cxx/Debug/4b2c4660/armeabi-v7a/CMakeFiles/3.22.1-g37088a8-dirty/CMakeCXXCompiler.cmake"
 		},
 		{
 			"isCMake" : true,
@@ -692,7 +692,7 @@
 		},
 		{
 			"isGenerated" : true,
-			"path" : "C:/Users/Gabby/OneDrive/Desktop/Thesis_Android - Copy/kotlin-webwrapper/OpenCV-4.5.5-android-sdk/OpenCV-android-sdk/sdk/.cxx/Debug/4b2c4660/armeabi-v7a/CMakeFiles/3.22.1-g37088a8-dirty/CMakeCCompiler.cmake"
+			"path" : "C:/Users/Gabby/OneDrive/Desktop/PixelPioneers/main/OpenCV-4.5.5-android-sdk/OpenCV-android-sdk/sdk/.cxx/Debug/4b2c4660/armeabi-v7a/CMakeFiles/3.22.1-g37088a8-dirty/CMakeCCompiler.cmake"
 		},
 		{
 			"isCMake" : true,
@@ -786,14 +786,14 @@
 		},
 		{
 			"isGenerated" : true,
-			"path" : "C:/Users/Gabby/OneDrive/Desktop/Thesis_Android - Copy/kotlin-webwrapper/OpenCV-4.5.5-android-sdk/OpenCV-android-sdk/sdk/.cxx/Debug/4b2c4660/armeabi-v7a/CMakeFiles/3.22.1-g37088a8-dirty/CMakeCXXCompiler.cmake"
+			"path" : "C:/Users/Gabby/OneDrive/Desktop/PixelPioneers/main/OpenCV-4.5.5-android-sdk/OpenCV-android-sdk/sdk/.cxx/Debug/4b2c4660/armeabi-v7a/CMakeFiles/3.22.1-g37088a8-dirty/CMakeCXXCompiler.cmake"
 		}
 	],
 	"kind" : "cmakeFiles",
 	"paths" : 
 	{
-		"build" : "C:/Users/Gabby/OneDrive/Desktop/Thesis_Android - Copy/kotlin-webwrapper/OpenCV-4.5.5-android-sdk/OpenCV-android-sdk/sdk/.cxx/Debug/4b2c4660/armeabi-v7a",
-		"source" : "C:/Users/Gabby/OneDrive/Desktop/Thesis_Android - Copy/kotlin-webwrapper/OpenCV-4.5.5-android-sdk/OpenCV-android-sdk/sdk/libcxx_helper"
+		"build" : "C:/Users/Gabby/OneDrive/Desktop/PixelPioneers/main/OpenCV-4.5.5-android-sdk/OpenCV-android-sdk/sdk/.cxx/Debug/4b2c4660/armeabi-v7a",
+		"source" : "C:/Users/Gabby/OneDrive/Desktop/PixelPioneers/main/OpenCV-4.5.5-android-sdk/OpenCV-android-sdk/sdk/libcxx_helper"
 	},
 	"version" : 
 	{
