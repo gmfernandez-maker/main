@@ -206,7 +206,7 @@ class UploadFragment : Fragment() {
                 setLoading(false)
                 val diagnostic = buildDiagnosticMessage(qualityReport, pipelineAnalysis, selectedBitmap!!)
                 androidx.appcompat.app.AlertDialog.Builder(requireContext())
-                    .setTitle("No jewelry detected")
+                    .setTitle("Try a clearer photo")
                     .setMessage(diagnostic)
                     .setNeutralButton("Retake") { d, _ -> d.dismiss() }
                     .setPositiveButton("Force Save") { d, _ ->
@@ -450,53 +450,19 @@ class UploadFragment : Fragment() {
         pipelineResult: VanillaPipelineResult?,
         bitmap: Bitmap
     ): String {
-        val lines = mutableListOf<String>()
-        
-        lines.add("IMAGE QUALITY:")
-        lines.add("  Resolution: ${bitmap.width}×${bitmap.height}")
-        lines.add("  Brightness: ${String.format("%.1f", qualityReport.brightnessMean)}/255")
-        lines.add("  Contrast: ${String.format("%.1f", qualityReport.contrastStdDev)}")
-        lines.add("  Sharpness: ${String.format("%.1f", qualityReport.sharpnessVariance)}")
-        if (qualityReport.warnings.isNotEmpty()) {
-            lines.add("  Warnings: ${qualityReport.warnings.take(2).joinToString("; ")}")
-        }
-        
-        if (pipelineResult != null) {
-            lines.add("\nDETECTION:")
-            val scanMode = if (pipelineResult.yoloStatus.contains("fallback", ignoreCase = true)) {
-                "Compatibility mode"
-            } else {
-                "Standard mode"
+        val warningNote = qualityReport.warnings.firstOrNull().orEmpty()
+
+        return buildString {
+            appendLine("No jewelry was detected in this photo.")
+            if (warningNote.isNotBlank()) {
+                appendLine("Photo note: ${sanitizeConsumerText(warningNote)}")
             }
-            lines.add("  Scanner status: $scanMode")
-            lines.add("  Items found: ${pipelineResult.detections.size}")
-            if (pipelineResult.detections.isNotEmpty()) {
-                val topDet = pipelineResult.detections.maxByOrNull { it.score }
-                lines.add("  Top confidence: ${String.format("%.1f", (topDet?.score ?: 0f) * 100)}%")
-            }
-            
-            lines.add("\nCOLOR ANALYSIS:")
-            lines.add("  Metallic detected: ${if (pipelineResult.colorPreFilterPassed) "YES" else "NO"}")
-            pipelineResult.materialScore?.let { m ->
-                lines.add("  Material: ${m.predicted.uppercase()} (gold: ${m.goldScore.toInt()}%, silver: ${m.silverScore.toInt()}%)")
-            }
-            
-            if (pipelineResult.notes.isNotEmpty()) {
-                lines.add("\nNOTES:")
-                pipelineResult.notes.take(3).forEach { note ->
-                    lines.add("  • ${sanitizeConsumerText(note)}")
-                }
-            }
-        }
-        
-        lines.add("\nNext steps:")
-        lines.add("• Tap 'Force Save' to submit anyway")
-        lines.add("• Or 'Retake' and try:")
-        lines.add("  - Better lighting")
-        lines.add("  - Centered item")
-        lines.add("  - Steady camera")
-        
-        return lines.joinToString("\n")
+            appendLine()
+            appendLine("Try again with one item on a plain background, kept centered and steady.")
+            appendLine("If your item has a stamp, take a close-up of the stamp too.")
+            appendLine()
+            appendLine("You can still choose Force Save to continue.")
+        }.trim()
     }
 
     private fun verifyStampMaterialConsistency(

@@ -50,6 +50,9 @@ class GradeResultFragment : Fragment() {
     }
 
     private fun computedTotalScore(result: SuggestMetadataOutput): Int {
+        val persistedTotal = clampScore(result.totalComputedScore)
+        if (persistedTotal > 0) return persistedTotal
+
         val yolo = clampScore(result.yoloScore)
         val lbp = clampScore(result.lbpScore)
         val orb = clampScore(result.orbScore)
@@ -225,7 +228,7 @@ class GradeResultFragment : Fragment() {
         originalPreviewBitmap = null
         boxedPreviewBitmap = null
         hasDetectionOverlay = detections.isNotEmpty()
-        showingOverlay = true
+        showingOverlay = false
 
         if (detections.isEmpty()) {
             try {
@@ -253,7 +256,7 @@ class GradeResultFragment : Fragment() {
 
         originalPreviewBitmap = sourceBitmap
         boxedPreviewBitmap = drawYoloBoxes(sourceBitmap, detections)
-        imageView.load(boxedPreviewBitmap)
+        imageView.load(originalPreviewBitmap)
         updateToggleButtonState()
     }
 
