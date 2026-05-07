@@ -156,8 +156,6 @@ class GradeResultFragment : Fragment() {
         } catch (e: Exception) {
             null
         } ?: SuggestMetadataOutput(
-                        // Reload feedback list for this result to show the newly added entry
-                        loadFeedbackForPreview(previewArg)
             material = "Sample Item",
             purity = "Unknown",
             gemstones = null,
