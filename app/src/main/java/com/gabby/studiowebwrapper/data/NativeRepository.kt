@@ -33,6 +33,7 @@ object NativeRepository {
     private const val KEY_HISTORY = "grade_history"
     private const val KEY_SYNCED_HISTORY_KEYS = "synced_history_keys"
     private const val KEY_LAST_HISTORY_SYNC_AT = "last_history_sync_at"
+    private const val KEY_FEEDBACK_SHARING = "feedback_sharing_enabled"
 
     private val gson = Gson()
     private val httpClient = OkHttpClient()
@@ -587,6 +588,90 @@ object NativeRepository {
         return runCatching {
             httpClient.newCall(request).execute().use { it.isSuccessful }
         }.getOrDefault(false)
+    }
+
+    fun isFeedbackSharingEnabled(context: Context): Boolean {
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        return prefs.getBoolean(KEY_FEEDBACK_SHARING, false)
+    }
+
+    fun setFeedbackSharingEnabled(context: Context, enabled: Boolean) {
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit().putBoolean(KEY_FEEDBACK_SHARING, enabled).apply()
+    }
+
+    fun syncFeedbackEntryToSupabase(context: Context, entry: com.gabby.studiowebwrapper.data.FeedbackEntry) {
+        if (!supabaseEnabled()) return
+        if (!isFeedbackSharingEnabled(context)) return
+
+        thread(start = true, isDaemon = true) {
+            val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+            val accessToken = prefs.getString(KEY_ACCESS_TOKEN, null).orEmpty()
+            if (accessToken.isBlank()) return@thread
+
+            // Send anonymized payload: omit previewUri and userId to avoid PII leakage
+            val sanitizedResultJson = scrubResultJsonForUpload(entry.resultJson)
+            val commentSafe = entry.comment?.takeIf { it.length <= 1000 } ?: ""
+            val payload = mapOf(
+                "selection" to entry.selection,
+                "comment" to commentSafe,
+                "model_confidence" to entry.modelConfidence,
+                "routed_to" to (entry.routedTo ?: ""),
+                "result_json" to sanitizedResultJson,
+                "created_at" to entry.timestamp
+            )
+
+            runCatching {
+                val request = Request.Builder()
+                    .url(supabaseRestUrl("feedback_entries"))
+                    .supabaseHeaders(accessToken)
+                    .header("Prefer", "return=minimal")
+                    .post(gson.toJson(payload).toRequestBody(jsonMediaType))
+                    .build()
+
+                httpClient.newCall(request).execute().use { }
+            }
+        }
+    }
+
+    // Public for testing - produce a sanitized JSON suitable for server upload
+    fun scrubResultJsonForUpload(resultJson: String): String {
+        if (resultJson.isBlank()) return "{}"
+        try {
+            // Fields that must always be removed or redacted
+            val redactList = listOf("stampText", "sourceHash", "analysis", "similarProducts", "yoloDetections", "previewUri", "userId")
+
+            val jsonElement = runCatching { com.google.gson.JsonParser.parseString(resultJson) }.getOrNull()
+            if (jsonElement != null && jsonElement.isJsonObject) {
+                val obj = jsonElement.asJsonObject
+
+                // Remove redact fields if present
+                redactList.forEach { key -> if (obj.has(key)) obj.remove(key) }
+
+                // Additionally build a reduced object keeping only numeric signals and safe lists
+                val reduced = com.google.gson.JsonObject()
+                if (obj.has("material")) reduced.add("material", obj.get("material"))
+                if (obj.has("purity")) reduced.add("purity", obj.get("purity"))
+                if (obj.has("stampDetected")) reduced.add("stampDetected", obj.get("stampDetected"))
+                if (obj.has("stampConfidence")) reduced.add("stampConfidence", obj.get("stampConfidence"))
+                if (obj.has("qualityScore")) reduced.add("qualityScore", obj.get("qualityScore"))
+                if (obj.has("yoloScore")) reduced.add("yoloScore", obj.get("yoloScore"))
+                if (obj.has("lbpScore")) reduced.add("lbpScore", obj.get("lbpScore"))
+                if (obj.has("orbScore")) reduced.add("orbScore", obj.get("orbScore"))
+                if (obj.has("totalComputedScore")) reduced.add("totalComputedScore", obj.get("totalComputedScore"))
+                if (obj.has("captureWarnings")) reduced.add("captureWarnings", obj.get("captureWarnings"))
+                if (obj.has("rescanSuggestions")) reduced.add("rescanSuggestions", obj.get("rescanSuggestions"))
+
+                return gson.toJson(reduced)
+            }
+        } catch (t: Throwable) {
+            // fallthrough to fallback
+        }
+
+        // Fallback: perform simple regex redaction for known sensitive keys
+        return resultJson.replace(Regex("\"stampText\"\\s*:\\s*\".*?\""), "\"stampText\":\"[redacted]\"")
+            .replace(Regex("\"sourceHash\"\\s*:\\s*\".*?\""), "\"sourceHash\":\"[redacted]\"")
+            .let { s -> s }
     }
 
     private fun historySyncKey(userId: String, timestamp: Long, previewUri: String): String {

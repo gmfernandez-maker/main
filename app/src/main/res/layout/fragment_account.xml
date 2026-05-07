@@ -303,6 +303,32 @@
 
         </LinearLayout>
 
+        <!-- Share Anonymous Feedback -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="56dp"
+            android:background="@drawable/bg_glassmorphism"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:paddingHorizontal="16dp"
+            android:layout_marginBottom="8dp">
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Share anonymous feedback"
+                android:textColor="@color/jg_text_primary"
+                android:textSize="14sp" />
+
+            <com.google.android.material.switchmaterial.SwitchMaterial
+                android:id="@+id/feedbackShareSwitch"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textColor="@color/jg_text_secondary" />
+
+        </LinearLayout>
+
         <!-- About Button -->
         <LinearLayout
             android:id="@+id/aboutButton"
@@ -350,6 +376,36 @@
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
                 android:text="Run YOLO Demo"
+                android:textColor="@color/jg_text_primary"
+                android:textSize="14sp" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="›"
+                android:textColor="@color/jg_gold"
+                android:textSize="20sp" />
+
+        </LinearLayout>
+
+        <!-- Admin: Review Feedback -->
+        <LinearLayout
+            android:id="@+id/feedbackAdminButton"
+            android:layout_width="match_parent"
+            android:layout_height="56dp"
+            android:background="@drawable/bg_glassmorphism"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:paddingHorizontal="16dp"
+            android:layout_marginBottom="24dp"
+            android:clickable="true"
+            android:focusable="true">
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Review Feedback (admin)"
                 android:textColor="@color/jg_text_primary"
                 android:textSize="14sp" />
 

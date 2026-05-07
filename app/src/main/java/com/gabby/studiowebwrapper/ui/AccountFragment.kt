@@ -29,6 +29,7 @@ class AccountFragment : Fragment(), ModelSelectionDialogFragment.Callbacks {
 
     interface Callbacks {
         fun navigateToWelcome()
+        fun navigateToAdminFeedback()
         fun navigateToYoloDemo()
     }
 
@@ -102,6 +103,13 @@ class AccountFragment : Fragment(), ModelSelectionDialogFragment.Callbacks {
             Toast.makeText(requireContext(), if (isChecked) "Quantized model enabled" else "Quantized model disabled", Toast.LENGTH_SHORT).show()
         }
 
+        val feedbackShareSwitch = view.findViewById<SwitchMaterial>(R.id.feedbackShareSwitch)
+        feedbackShareSwitch.isChecked = NativeRepository.isFeedbackSharingEnabled(requireContext())
+        feedbackShareSwitch.setOnCheckedChangeListener { _, isChecked ->
+            NativeRepository.setFeedbackSharingEnabled(requireContext(), isChecked)
+            Toast.makeText(requireContext(), if (isChecked) "Feedback sharing enabled (anonymous)" else "Feedback sharing disabled", Toast.LENGTH_SHORT).show()
+        }
+
         // Settings buttons
         view.findViewById<LinearLayout>(R.id.settingsButton).setOnClickListener {
             showModelSelectionDialog()
@@ -113,6 +121,10 @@ class AccountFragment : Fragment(), ModelSelectionDialogFragment.Callbacks {
 
         view.findViewById<LinearLayout>(R.id.yoloDemoButton).setOnClickListener {
             callbacks?.navigateToYoloDemo()
+        }
+
+        view.findViewById<LinearLayout>(R.id.feedbackAdminButton).setOnClickListener {
+            callbacks?.navigateToAdminFeedback()
         }
 
         // Logout button

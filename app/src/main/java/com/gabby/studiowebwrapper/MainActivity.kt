@@ -118,6 +118,10 @@ class MainActivity : AppCompatActivity(),
         safeReplaceFragment(AccountFragment(), addToBackStack = true)
     }
 
+    override fun navigateToAdminFeedback() {
+        safeReplaceFragment(AdminFeedbackFragment(), addToBackStack = true)
+    }
+
     override fun navigateToYoloDemo() {
         safeReplaceFragment(YoloDemoFragment(), addToBackStack = true)
     }
