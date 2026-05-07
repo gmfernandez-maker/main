@@ -8,6 +8,7 @@ import com.gabby.studiowebwrapper.databinding.ActivityMainBinding
 import com.gabby.studiowebwrapper.data.NativeRepository
 import com.gabby.studiowebwrapper.model.SuggestMetadataOutput
 import com.gabby.studiowebwrapper.ui.AccountFragment
+import com.gabby.studiowebwrapper.ui.AdminFeedbackFragment
 import com.gabby.studiowebwrapper.ui.AdvancedMetricsFragment
 import com.gabby.studiowebwrapper.ui.GradeResultFragment
 import com.gabby.studiowebwrapper.ui.HistoryFragment
@@ -16,7 +17,7 @@ import com.gabby.studiowebwrapper.ui.LoginFragment
 import com.gabby.studiowebwrapper.ui.SignupFragment
 import com.gabby.studiowebwrapper.ui.UploadFragment
 import com.gabby.studiowebwrapper.ui.WelcomeFragment
-import com.gabby.studiowebwrapper.ui.YoloDemoFragment
+import com.gabby.studiowebwrapper.ui.SettingsPreferencesFragment
 import com.gabby.studiowebwrapper.util.ThemeModeManager
 import com.gabby.studiowebwrapper.data.AppDatabase
 import com.gabby.studiowebwrapper.data.HistoryEntry
@@ -122,8 +123,8 @@ class MainActivity : AppCompatActivity(),
         safeReplaceFragment(AdminFeedbackFragment(), addToBackStack = true)
     }
 
-    override fun navigateToYoloDemo() {
-        safeReplaceFragment(YoloDemoFragment(), addToBackStack = true)
+    override fun navigateToSettingsPreferences() {
+        safeReplaceFragment(SettingsPreferencesFragment(), addToBackStack = true)
     }
 
     override fun navigateToGradeDetail(resultJson: String, previewUri: String) {
@@ -136,7 +137,6 @@ class MainActivity : AppCompatActivity(),
 
     override fun showGradeResult(result: SuggestMetadataOutput, previewDataUri: String) {
         // Save a small thumbnail file and persist the graded result to Room DB, then navigate.
-        var previewPath = previewDataUri
         try {
             lifecycleScope.launch(Dispatchers.IO) {
                 try {
@@ -155,7 +155,7 @@ class MainActivity : AppCompatActivity(),
                     if (!dir.exists()) dir.mkdirs()
                     val outFile = File(dir, "thumb_${System.currentTimeMillis()}.jpg")
                     outFile.outputStream().use { scaled.compress(android.graphics.Bitmap.CompressFormat.JPEG, 80, it) }
-                    previewPath = outFile.absolutePath
+                    val previewPath = outFile.absolutePath
 
                     // insert into Room
                     val db = AppDatabase.getInstance(this@MainActivity)

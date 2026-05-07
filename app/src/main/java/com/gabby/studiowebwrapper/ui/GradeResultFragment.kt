@@ -44,8 +44,6 @@ class GradeResultFragment : Fragment() {
     private var showingOverlay: Boolean = true
     private var currentResult: SuggestMetadataOutput? = null
     private lateinit var pickStampLauncher: ActivityResultLauncher<String>
-    private var lastLoadedFeedbackEntries: List<com.gabby.studiowebwrapper.data.FeedbackEntry> = emptyList()
-    private var currentFilter: String = "All"
 
     private fun clampScore(score: Int): Int = score.coerceIn(0, 100)
 
@@ -74,20 +72,11 @@ class GradeResultFragment : Fragment() {
         }
     }
 
-    private fun likelihoodBandDescription(band: String): String {
-        return when (band) {
-            "Very Close Match" -> "The photo looks very similar to items the app has seen before."
-            "Close Match" -> "The photo matches known examples fairly well."
-            "Some Similarity" -> "The photo shares some features with known examples, but it is less certain."
-            else -> "The photo does not look very close to the known examples."
-        }
-    }
-
     private fun badgeBackgroundForBand(band: String): Int {
         return when (band) {
-            "Very High" -> com.gabby.studiowebwrapper.R.drawable.bg_badge_tier_a
-            "High" -> com.gabby.studiowebwrapper.R.drawable.bg_badge_tier_b
-            "Moderate" -> com.gabby.studiowebwrapper.R.drawable.bg_badge_tier_c
+            "Very Close Match" -> com.gabby.studiowebwrapper.R.drawable.bg_badge_tier_a
+            "Close Match" -> com.gabby.studiowebwrapper.R.drawable.bg_badge_tier_b
+            "Some Similarity" -> com.gabby.studiowebwrapper.R.drawable.bg_badge_tier_c
             else -> com.gabby.studiowebwrapper.R.drawable.bg_badge_tier_d
         }
     }
@@ -179,7 +168,6 @@ class GradeResultFragment : Fragment() {
             try {
                 val total = computedTotalScore(result)
                 val band = likelihoodBandForScore(total)
-                val bandDescription = likelihoodBandDescription(band)
                 
                 // Main score display - user-friendly
                 totalScoreText.text = "How close it looks: $total%"
@@ -204,7 +192,7 @@ class GradeResultFragment : Fragment() {
 
                 materialText.text = resolvedStampLabel(result)
                 karatBasisText.text = resolvedStampBasis(result)
-                analysisText.text = buildUserFacingAnalysis(result, total)
+                analysisText.text = buildUserFacingAnalysis(result)
                 
                 advancedMetricsButton.setOnClickListener {
                     callbacks?.openAdvancedMetrics(Gson().toJson(result), previewDataUri)
@@ -225,7 +213,6 @@ class GradeResultFragment : Fragment() {
                     val selection = when (selectedId) {
                         R.id.feedbackCorrect -> "Correct"
                         R.id.feedbackIncorrect -> "Incorrect"
-                        R.id.feedbackUnsure -> "Unsure"
                         else -> null
                     }
 
@@ -282,82 +269,9 @@ class GradeResultFragment : Fragment() {
                 } catch (_: Exception) {}
             }
         }
-
-        // Setup filter spinner
-        val spinner = binding?.root?.findViewById<Spinner>(R.id.feedbackFilterSpinner)
-        spinner?.let { s ->
-            val items = listOf("All", "Correct", "Incorrect", "Unsure")
-            val adapter = ArrayAdapter(requireContext(), android.R.layout.simple_spinner_item, items)
-            adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
-            s.adapter = adapter
-            s.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
-                override fun onItemSelected(parent: AdapterView<*>, view: View?, position: Int, id: Long) {
-                    currentFilter = items[position]
-                    // re-render with current filter
-                    renderFeedbackEntries(lastLoadedFeedbackEntries)
-                }
-
-                override fun onNothingSelected(parent: AdapterView<*>) {}
-            }
-        }
-
-        // Load existing feedback for this preview/result
-        val previewArg = arguments?.getString(ARG_PREVIEW_DATA_URI).orEmpty()
-        loadFeedbackForPreview(previewArg)
     }
 
-    private fun loadFeedbackForPreview(previewUri: String) {
-        if (previewUri.isBlank()) return
-        viewLifecycleOwner.lifecycleScope.launch {
-            val entries = withContext(Dispatchers.IO) {
-                AppDatabase.getInstance(requireContext()).feedbackDao().getByPreviewUri(previewUri)
-            }
-            lastLoadedFeedbackEntries = entries
-            updateFeedbackSummary(entries)
-            renderFeedbackEntries(entries)
-        }
-    }
 
-    private fun renderFeedbackEntries(entries: List<com.gabby.studiowebwrapper.data.FeedbackEntry>) {
-        val container = binding?.root?.findViewById<android.widget.LinearLayout>(R.id.feedbackListContainer) ?: return
-        container.removeAllViews()
-        val toShow = when (currentFilter) {
-            "Correct" -> entries.filter { it.selection == "Correct" }
-            "Incorrect" -> entries.filter { it.selection == "Incorrect" }
-            "Unsure" -> entries.filter { it.selection == "Unsure" }
-            else -> entries
-        }
-
-        if (toShow.isEmpty()) return
-
-        toShow.forEach { e ->
-            val card = layoutInflater.inflate(R.layout.item_feedback_card, null)
-            val userView = card.findViewById<android.widget.TextView>(R.id.fbUser)
-            val selView = card.findViewById<android.widget.TextView>(R.id.fbSelection)
-            val commentView = card.findViewById<android.widget.TextView>(R.id.fbComment)
-            val metaView = card.findViewById<android.widget.TextView>(R.id.fbMeta)
-
-            val userLabel = if (e.userId.isBlank()) "Anonymous" else e.userId
-            userView.text = userLabel
-            selView.text = e.selection
-            commentView.text = e.comment ?: ""
-            val ts = java.text.DateFormat.getDateTimeInstance(java.text.DateFormat.SHORT, java.text.DateFormat.SHORT).format(java.util.Date(e.timestamp))
-            metaView.text = "Confidence: ${e.modelConfidence}% • Routed: ${e.routedTo ?: "none"} • $ts"
-
-            container.addView(card)
-        }
-    }
-
-    private fun updateFeedbackSummary(entries: List<com.gabby.studiowebwrapper.data.FeedbackEntry>) {
-        val total = entries.size
-        val correct = entries.count { it.selection == "Correct" }
-        val incorrect = entries.count { it.selection == "Incorrect" }
-        val unsure = entries.count { it.selection == "Unsure" }
-        val pct = if (total > 0) (correct * 100 / total) else 0
-        val summaryText = "Feedback: $total total • $pct% correct ($correct / $incorrect / $unsure)"
-        val tv = binding?.root?.findViewById<android.widget.TextView>(R.id.feedbackSummaryText)
-        tv?.text = summaryText
-    }
 
     private fun renderPreviewWithDetections(previewDataUri: String, result: SuggestMetadataOutput) {
         val imageView = binding?.previewImage ?: return
@@ -580,12 +494,12 @@ class GradeResultFragment : Fragment() {
 
             materialText.text = resolvedStampLabel(result)
             karatBasisText.text = resolvedStampBasis(result)
-            analysisText.text = buildUserFacingAnalysis(result, total)
+            analysisText.text = buildUserFacingAnalysis(result)
             rescanSuggestionsText.text = buildRescanSuggestionsText(result, total)
         }
     }
 
-    private fun buildUserFacingAnalysis(result: SuggestMetadataOutput, total: Int): String {
+    private fun buildUserFacingAnalysis(result: SuggestMetadataOutput): String {
         val noStampsDetected = result.yoloDetections.orEmpty().isEmpty() &&
             clampScore(result.yoloScore) == 0 &&
             clampScore(result.lbpScore) == 0 &&
@@ -658,11 +572,9 @@ class GradeResultFragment : Fragment() {
     private fun determineRouting(selection: String, modelConf: Int): String? {
         // Simple routing rules:
         // - "Incorrect" => data curation (mislabeled / needs relabel)
-        // - "Unsure" => product backlog (UX/rule/threshold improvements)
         // - "Correct" with very low confidence => product backlog (improve thresholds)
         return when {
             selection == "Incorrect" -> "data-curation"
-            selection == "Unsure" -> "product-backlog"
             selection == "Correct" && modelConf < 50 -> "product-backlog"
             else -> null
         }

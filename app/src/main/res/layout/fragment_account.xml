@@ -33,15 +33,16 @@
             android:elevation="3dp">
 
             <!-- Profile Icon -->
-            <TextView
+            <ImageView
+                android:id="@+id/profileIcon"
                 android:layout_width="80dp"
                 android:layout_height="80dp"
                 android:layout_gravity="center_horizontal"
                 android:background="@drawable/bg_dashboard_tile"
-                android:gravity="center"
-                android:text="JD"
-                android:textAppearance="@style/TextAppearance.Material3.HeadlineLarge"
-                android:textColor="@color/jg_gold_light"
+                android:padding="12dp"
+                android:src="@drawable/ic_person"
+                android:contentDescription="Profile icon"
+                android:tint="@color/jg_gold_light"
                 android:layout_marginBottom="16dp" />
 
             <!-- User Name -->
@@ -224,111 +225,6 @@
 
         </LinearLayout>
 
-        <!-- Theme Toggle -->
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="56dp"
-            android:background="@drawable/bg_glassmorphism"
-            android:orientation="horizontal"
-            android:gravity="center_vertical"
-            android:paddingHorizontal="16dp"
-            android:layout_marginBottom="8dp">
-
-            <TextView
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:text="Theme Mode"
-                android:textColor="@color/jg_text_primary"
-                android:textSize="14sp" />
-
-            <com.google.android.material.switchmaterial.SwitchMaterial
-                android:id="@+id/themeModeSwitch"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Dark"
-                android:textColor="@color/jg_text_secondary" />
-
-        </LinearLayout>
-
-        <!-- Use On-Device Model Toggle -->
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="56dp"
-            android:background="@drawable/bg_glassmorphism"
-            android:orientation="horizontal"
-            android:gravity="center_vertical"
-            android:paddingHorizontal="16dp"
-            android:layout_marginBottom="8dp">
-
-            <TextView
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:text="Use On-Device Model"
-                android:textColor="@color/jg_text_primary"
-                android:textSize="14sp" />
-
-            <com.google.android.material.switchmaterial.SwitchMaterial
-                android:id="@+id/useModelSwitch"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:textColor="@color/jg_text_secondary" />
-
-        </LinearLayout>
-
-        <!-- Use Quantized Model Toggle -->
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="56dp"
-            android:background="@drawable/bg_glassmorphism"
-            android:orientation="horizontal"
-            android:gravity="center_vertical"
-            android:paddingHorizontal="16dp"
-            android:layout_marginBottom="8dp">
-
-            <TextView
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:text="Use Quantized Model"
-                android:textColor="@color/jg_text_primary"
-                android:textSize="14sp" />
-
-            <com.google.android.material.switchmaterial.SwitchMaterial
-                android:id="@+id/useQuantizedSwitch"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:textColor="@color/jg_text_secondary" />
-
-        </LinearLayout>
-
-        <!-- Share Anonymous Feedback -->
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="56dp"
-            android:background="@drawable/bg_glassmorphism"
-            android:orientation="horizontal"
-            android:gravity="center_vertical"
-            android:paddingHorizontal="16dp"
-            android:layout_marginBottom="8dp">
-
-            <TextView
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:text="Share anonymous feedback"
-                android:textColor="@color/jg_text_primary"
-                android:textSize="14sp" />
-
-            <com.google.android.material.switchmaterial.SwitchMaterial
-                android:id="@+id/feedbackShareSwitch"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:textColor="@color/jg_text_secondary" />
-
-        </LinearLayout>
-
         <!-- About Button -->
         <LinearLayout
             android:id="@+id/aboutButton"
@@ -347,35 +243,6 @@
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
                 android:text="ℹ About JewelGrade"
-                android:textColor="@color/jg_text_primary"
-                android:textSize="14sp" />
-
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="›"
-                android:textColor="@color/jg_gold"
-                android:textSize="20sp" />
-
-        </LinearLayout>
-
-        <LinearLayout
-            android:id="@+id/yoloDemoButton"
-            android:layout_width="match_parent"
-            android:layout_height="56dp"
-            android:background="@drawable/bg_glassmorphism"
-            android:orientation="horizontal"
-            android:gravity="center_vertical"
-            android:paddingHorizontal="16dp"
-            android:layout_marginBottom="24dp"
-            android:clickable="true"
-            android:focusable="true">
-
-            <TextView
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:text="Run YOLO Demo"
                 android:textColor="@color/jg_text_primary"
                 android:textSize="14sp" />
 

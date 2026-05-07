@@ -204,7 +204,7 @@ class UploadFragment : Fragment() {
             if (pipelineAnalysis == null || pipelineAnalysis.detections.isEmpty()) {
                 // No confident detections — show diagnostic info then offer forced-save option
                 setLoading(false)
-                val diagnostic = buildDiagnosticMessage(qualityReport, pipelineAnalysis, selectedBitmap!!)
+                val diagnostic = buildDiagnosticMessage(qualityReport)
                 androidx.appcompat.app.AlertDialog.Builder(requireContext())
                     .setTitle("Try a clearer photo")
                     .setMessage(diagnostic)
@@ -257,7 +257,7 @@ class UploadFragment : Fragment() {
             }
 
             val stampOcrResult = withContext(Dispatchers.Default) {
-                val topDetection = pipelineAnalysis?.detections?.maxByOrNull { it.score }
+                val topDetection = pipelineAnalysis.detections.maxByOrNull { it.score }
                 if (topDetection != null) {
                     runCatching { StampOcr.detectStampInRoi(selectedBitmap!!, topDetection) }.getOrNull()
                 } else {
@@ -266,7 +266,7 @@ class UploadFragment : Fragment() {
             }
 
             // Check material type and show alert if it's not gold
-            val materialScore = pipelineAnalysis?.materialScore
+            val materialScore = pipelineAnalysis.materialScore
             if (materialScore != null && materialScore.predicted != "gold") {
                 setLoading(false)
                 val materialTitle = when (materialScore.predicted) {
@@ -445,11 +445,7 @@ class UploadFragment : Fragment() {
         return "This photo is too hard to read clearly. Please try again:\n$reasons"
     }
 
-    private fun buildDiagnosticMessage(
-        qualityReport: ImageQualityReport,
-        pipelineResult: VanillaPipelineResult?,
-        bitmap: Bitmap
-    ): String {
+    private fun buildDiagnosticMessage(qualityReport: ImageQualityReport): String {
         val warningNote = qualityReport.warnings.firstOrNull().orEmpty()
 
         return buildString {

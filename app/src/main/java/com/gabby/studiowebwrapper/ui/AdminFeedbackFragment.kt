@@ -9,6 +9,7 @@ import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
+import coil.load
 import com.gabby.studiowebwrapper.R
 import com.gabby.studiowebwrapper.data.AppDatabase
 import com.gabby.studiowebwrapper.data.FeedbackEntry
@@ -64,10 +65,16 @@ class AdminFeedbackFragment : Fragment() {
 
     private fun createCardFor(e: FeedbackEntry): View {
         val card = layoutInflater.inflate(R.layout.item_feedback_card, null)
+        val thumbView = card.findViewById<android.widget.ImageView>(R.id.fbThumbnail)
         val userView = card.findViewById<TextView>(R.id.fbUser)
         val selView = card.findViewById<TextView>(R.id.fbSelection)
         val commentView = card.findViewById<TextView>(R.id.fbComment)
         val metaView = card.findViewById<TextView>(R.id.fbMeta)
+
+        // Load thumbnail image
+        if (e.previewUri.isNotBlank()) {
+            thumbView.load(e.previewUri)
+        }
 
         val userLabel = if (e.userId.isBlank()) "Anonymous" else e.userId
         userView.text = userLabel

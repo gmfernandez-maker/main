@@ -230,13 +230,6 @@
                     android:layout_height="wrap_content"
                     android:layout_marginStart="12dp"
                     android:text="Incorrect" />
-
-                <RadioButton
-                    android:id="@+id/feedbackUnsure"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginStart="12dp"
-                    android:text="Unsure" />
             </RadioGroup>
 
             <EditText
@@ -249,39 +242,6 @@
                 android:minLines="2"
                 android:maxLines="4"
                 android:backgroundTint="@color/jg_text_secondary" />
-
-            <!-- Feedback summary and filter -->
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:gravity="center_vertical"
-                android:layout_marginTop="8dp">
-
-                <TextView
-                    android:id="@+id/feedbackSummaryText"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:text="Feedback: 0 total • 0% correct"
-                    android:textColor="@color/jg_text_primary"
-                    android:textSize="14sp" />
-
-                <Spinner
-                    android:id="@+id/feedbackFilterSpinner"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:spinnerMode="dropdown" />
-
-            </LinearLayout>
-
-            <!-- Container to show existing feedback for this result -->
-            <LinearLayout
-                android:id="@+id/feedbackListContainer"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:layout_marginTop="8dp" />
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/feedbackSendButton"

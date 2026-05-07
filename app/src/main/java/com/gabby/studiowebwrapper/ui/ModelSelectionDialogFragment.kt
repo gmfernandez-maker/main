@@ -38,9 +38,14 @@ class ModelSelectionDialogFragment : DialogFragment() {
         }
 
         for ((index, model) in allModels.withIndex()) {
+            val label = when {
+                model.label.contains("Nano") -> "Faster (YOLOv8n)"
+                model.label.contains("Small") -> "Accurate (YOLOv8s)"
+                else -> model.label
+            }
             val radioButton = RadioButton(context).apply {
                 id = index
-                text = "${model.label}\n${model.description}"
+                text = label
                 isChecked = model == currentModel
                 textSize = 14f
             }
