@@ -518,11 +518,16 @@ class GradeResultFragment : Fragment() {
             if (previousScore != null) {
                 ObjectAnimator.ofInt(overallScoreBar, "progress", previousScore, total).setDuration(600).start()
                 val delta = total - previousScore
-                val deltaStr = if (delta > 0) "+$delta" else if (delta < 0) "$delta" else "+0"
-                totalScoreText.text = "How close it looks: $total% ($deltaStr)"
+                // Only display the delta change when a karat stamp was detected by the user
+                if (result.stampDetected) {
+                    val deltaStr = if (delta > 0) "+$delta" else if (delta < 0) "$delta" else "+0"
+                    totalScoreText.text = "Visual Match: $total% ($deltaStr)"
+                } else {
+                    totalScoreText.text = "Visual Match: $total%"
+                }
             } else {
                 overallScoreBar.progress = total
-                totalScoreText.text = "How close it looks: $total%"
+                totalScoreText.text = "Visual Match: $total%"
             }
 
             materialText.text = resolvedStampLabel(result)
