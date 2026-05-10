@@ -12,6 +12,8 @@ import org.opencv.features2d.BFMatcher
 import org.opencv.features2d.ORB
 import org.opencv.imgproc.Imgproc
 import org.opencv.core.Size
+import org.opencv.core.MatOfPoint
+import kotlin.math.PI
 
 object DescriptorUtils {
 

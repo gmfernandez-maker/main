@@ -265,49 +265,8 @@ class UploadFragment : Fragment() {
                 }
             }
 
-            // Check material type and show alert if it's not gold
-            val materialScore = pipelineAnalysis.materialScore
-            if (materialScore != null && materialScore.predicted != "gold") {
-                setLoading(false)
-                val materialTitle = when (materialScore.predicted) {
-                    "silver" -> "SILVER DETECTED"
-                    else -> "MATERIAL: ${materialScore.predicted.uppercase()}"
-                }
-                val materialMessage = when (materialScore.predicted) {
-                    "silver" -> "The jewelry submitted appears to be silver. Analysis on silver or whitegold can be inaccurate as the app is specialized for yellow gold.\n\nDo you want to continue grading this item?"
-                    else -> "The jewelry submitted appears to be ${materialScore.predicted.uppercase()}. Analysis on non-gold materials can be inaccurate as the app is specialized for yellow gold.\n\nDo you want to continue grading this item?"
-                }
-                
-                var shouldProceed = false
-                androidx.appcompat.app.AlertDialog.Builder(requireContext())
-                    .setTitle(materialTitle)
-                    .setMessage(materialMessage)
-                    .setNegativeButton("Retake") { d, _ -> d.dismiss() }
-                    .setPositiveButton("Continue") { d, _ ->
-                        d.dismiss()
-                        shouldProceed = true
-                    }
-                    .setOnDismissListener {
-                        if (shouldProceed) {
-                            // Proceed with grading after user confirms material type
-                            viewLifecycleOwner.lifecycleScope.launch(Dispatchers.IO) {
-                                val request = GradeRequest(
-                                    fileDataUri = selectedDataUri!!,
-                                    fileName = selectedFileName
-                                )
-
-                                val gradingResult = NativeRepository.grade(requireContext(), request)
-
-                                withContext(Dispatchers.Main) {
-                                    setLoading(false)
-                                    processGradingResult(gradingResult, qualityReport, pipelineAnalysis, stampOcrResult)
-                                }
-                            }
-                        }
-                    }
-                    .show()
-                return@launch
-            }
+            // Material detection popup removed: app proceeds directly to grading
+            // regardless of detected material type
 
             val request = GradeRequest(
                 fileDataUri = selectedDataUri!!,
@@ -646,19 +605,25 @@ class UploadFragment : Fragment() {
             }
         }
 
+        // Adjust final score based on stamp presence: +15% if detected, -15% if not
+        val stampAdjustedScore = when {
+            stampPassesThreshold -> (visualLikelihood * 1.15f).coerceIn(0f, 100f).toInt()
+            else -> (visualLikelihood * 0.85f).coerceIn(0f, 100f).toInt()
+        }
+
         val analysisText = when {
             noDetectionOutcome -> {
-                "No jewelry stamp was clearly isolated in this photo. Please retake with one item centered on a plain background."
+                "No jewelry item was detected in this photo. Please retake with one item centered on a plain background."
             }
             stampPassesThreshold -> {
-                val typeText = detectedType?.let { " Jewelry type: $it." } ?: ""
-                "Predicted karat: $resolvedPurity based on OCR stamp evidence (${stampResult?.confidence}% confidence).$typeText"
+                val typeText = detectedType?.let { " Item type: $it." } ?: ""
+                "Predicted karat: $resolvedPurity based on stamp detection (${stampResult?.confidence}% confidence).$typeText This is a visual assessment, not a professional appraisal."
             }
             detectedType != null -> {
-                "Jewelry type detected: $detectedType. No reliable stamp evidence was visible, so the karat is predicted as Unknown. Likelihood score summarizes visual similarity only and is not a certification."
+                "Item type detected: $detectedType. No stamp was visible, so the karat is unknown. The visual match percentage reflects how similar this item looks to reference photos—it is not a certification or guarantee of authenticity."
             }
             else -> {
-                "No confident jewelry type was detected. No reliable stamp evidence was visible, so the karat is predicted as Unknown. Likelihood score summarizes available visual signals only and is not a certification."
+                "No clear item was detected. The visual match percentage reflects how similar this looks to reference photos—it is not a certification or guarantee of authenticity."
             }
         }
 
@@ -675,7 +640,7 @@ class UploadFragment : Fragment() {
             lbpScore = textureClamped,
             orbScore = keypointClamped,
             expectedWeightGrams = expectedWeightEstimation,
-            totalComputedScore = visualLikelihood,
+            totalComputedScore = stampAdjustedScore,
             explainability = explainability,
             yoloDetections = yoloDetections,
             captureWarnings = report.warnings,

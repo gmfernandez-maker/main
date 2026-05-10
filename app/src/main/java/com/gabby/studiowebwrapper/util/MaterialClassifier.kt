@@ -72,19 +72,31 @@ object MaterialClassifier {
         val goldTextureScore = if (goldCount > 0) (goldTextureSum / goldCount * 100f) else 0f
         val silverTextureScore = if (silverCount > 0) (silverTextureSum / silverCount * 100f) else 0f
 
-        // 4. Fuse texture scores with color bias
+        // 4. Conservative fusion of texture scores with color bias
         // Color bias: positive = gold-like, negative = silver-like
-        val fusedGoldScore = (goldTextureScore * 0.7f) + (max(0f, colorBias) * 0.3f)
-        val fusedSilverScore = (silverTextureScore * 0.7f) + (max(0f, -colorBias) * 0.3f)
+        // Only allow color to influence decision when its magnitude passes a threshold
+        val colorInfluence = if (kotlin.math.abs(colorBias) >= 15f) 0.3f else 0.0f
+        val textureInfluence = 1.0f - colorInfluence
+
+        val fusedGoldScore = (goldTextureScore * textureInfluence) + (max(0f, colorBias) * colorInfluence)
+        val fusedSilverScore = (silverTextureScore * textureInfluence) + (max(0f, -colorBias) * colorInfluence)
 
         // 5. Normalize and clamp scores
         val maxScore = maxOf(fusedGoldScore, fusedSilverScore)
         val goldNormalized = if (maxScore > 0) (fusedGoldScore / maxScore * 100f).coerceIn(0f, 100f) else 50f
         val silverNormalized = if (maxScore > 0) (fusedSilverScore / maxScore * 100f).coerceIn(0f, 100f) else 50f
 
-        // 6. Make prediction
-        val predicted = if (goldNormalized > silverNormalized) "gold" else "silver"
+        // 6. Make prediction using a conservative agreement rule.
+        // Require a small margin (5 points) to decide; otherwise prefer texture-majority.
+        val predicted = when {
+            goldNormalized - silverNormalized > 5f -> "gold"
+            silverNormalized - goldNormalized > 5f -> "silver"
+            else -> if (goldNormalized >= silverNormalized) "gold" else "silver"
+        }
+
         val confidence = abs(goldNormalized - silverNormalized)
+
+        // Note: debug logging removed per user request.
 
         return MaterialScore(
             goldScore = goldNormalized,

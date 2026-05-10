@@ -72,6 +72,33 @@ class GradeResultFragment : Fragment() {
         }
     }
 
+    private fun calculateConfidenceRange(result: SuggestMetadataOutput): Pair<Int, Int> {
+        val yolo = result.yoloScore.coerceIn(0, 100)
+        val lbp = result.lbpScore.coerceIn(0, 100)
+        val orb = result.orbScore.coerceIn(0, 100)
+        
+        // If no component scores, use wider range
+        if (yolo == 0 && lbp == 0 && orb == 0) {
+            return Pair(0, 15)
+        }
+        
+        val scores = listOf(yolo, lbp, orb).filter { it > 0 }
+        if (scores.isEmpty()) return Pair(0, 15)
+        
+        val avg = scores.average().toInt()
+        // Range based on how much components agree (tight agreement = narrow range)
+        val variance = if (scores.size > 1) {
+            scores.map { (it - avg) * (it - avg) }.average().toInt()
+        } else {
+            10
+        }
+        val range = (variance / 10).coerceIn(3, 15)
+        
+        val lower = (avg - range).coerceIn(0, 100)
+        val upper = (avg + range).coerceIn(0, 100)
+        return Pair(lower, upper)
+    }
+
     private fun badgeBackgroundForBand(band: String): Int {
         return when (band) {
             "Very Close Match" -> com.gabby.studiowebwrapper.R.drawable.bg_badge_tier_a
@@ -168,13 +195,19 @@ class GradeResultFragment : Fragment() {
             try {
                 val total = computedTotalScore(result)
                 val band = likelihoodBandForScore(total)
+                val (rangeMin, rangeMax) = calculateConfidenceRange(result)
                 
-                // Main score display - user-friendly
-                totalScoreText.text = "How close it looks: $total%"
+                // Main score display - show confidence range only if stamp detected
+                val scoreDisplay = if (result.stampDetected) {
+                    "Visual Match: $total% (±${(rangeMax - rangeMin) / 2}%)"
+                } else {
+                    "Visual Match: $total%"
+                }
+                totalScoreText.text = scoreDisplay
                 overallScoreBar.progress = total
 
                 // Assessment level badge
-                tierBadgeText.text = "Match level: $band"
+                tierBadgeText.text = "Likelihood Level: $band"
                 tierBadgeText.setBackgroundResource(badgeBackgroundForBand(band))
 
                 val topDetection = result.yoloDetections.orEmpty().maxByOrNull { it.score }
@@ -505,16 +538,16 @@ class GradeResultFragment : Fragment() {
             clampScore(result.lbpScore) == 0 &&
             clampScore(result.orbScore) == 0
         if (noStampsDetected) {
-            return "No jewelry was clearly detected in this photo. Karat estimate: Unknown. Please retake with better lighting and a steadier frame."
+            return "No jewelry detected. We can't estimate the karat without a clear item. Please retake with better lighting and a centered view."
         }
 
         val purity = result.purity?.ifBlank { "Unknown" } ?: "Unknown"
-        val stampNote = if (result.stampDetected && !result.stampText.isNullOrBlank()) {
-            " Based on a visible karat stamp: ${result.stampText}."
+        val stampBasis = if (result.stampDetected && !result.stampText.isNullOrBlank()) {
+            "Based on the karat stamp: ${result.stampText}"
         } else {
-            " Based on the photo alone, since no clear karat stamp was found."
+            "Based on visual appearance alone (no stamp detected)"
         }
-        return "Karat estimate: $purity.$stampNote\n\nThis is a photo-based estimate, so a jeweler can still verify it if needed."
+        return "Karat estimate: $purity — $stampBasis\n\nThis is a probability estimate, not a professional appraisal. Have a certified jeweler verify before relying on this."
     }
 
     private fun resolvedStampLabel(result: SuggestMetadataOutput): String {
@@ -528,9 +561,9 @@ class GradeResultFragment : Fragment() {
 
     private fun resolvedStampBasis(result: SuggestMetadataOutput): String {
         return if (result.stampDetected && !result.stampText.isNullOrBlank()) {
-            "Based on the visible karat stamp: ${result.stampText} (confidence: ${result.stampConfidence}%)"
+            "Stamp detected: ${result.stampText} (${result.stampConfidence}% confidence)"
         } else {
-            "Based on visual analysis without a clear karat stamp"
+            "No stamp detected — visual analysis only"
         }
     }
 

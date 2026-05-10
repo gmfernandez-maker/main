@@ -24,7 +24,7 @@ class YoloInference(
     private val context: Context,
     assetFileName: String = "yolov8n_ts.pt",
     private val inputSize: Int = 640,
-    private val confThreshold: Float = 0.25f
+    private val confThreshold: Float = 0.585f
 ) {
 
     private val module: Module

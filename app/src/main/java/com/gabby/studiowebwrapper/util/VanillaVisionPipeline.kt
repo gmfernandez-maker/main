@@ -300,11 +300,10 @@ class VanillaVisionPipeline(
             val output = detector.run(bitmap)
             val threshold = when (ModelPreferenceManager.getSelectedModel(context)) {
                 // Lower confidence thresholds to be more permissive with detections
-                ModelVariant.NANO -> 0.25f
-                ModelVariant.SMALL -> 0.30f
+                ModelVariant.NANO -> 0.585f
+                ModelVariant.SMALL -> 0.585f
             }
             val parsed = detector.parseDetections(output, threshold)
-            // Accept all detections regardless of position (center filter removed for better flexibility)
             parsed
         } catch (_: Throwable) {
             notes.add("YOLO inference failed for this frame.")

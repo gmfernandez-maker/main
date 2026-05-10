@@ -1,9 +1,9 @@
 # YOLO dataset config
 # Update names and ensure your images/labels are populated before training.
 path: dataset
-train: images/train
-val: images/val
-test: images/test
+train: images/train/images
+val: images/valid/images
+test: images/test/images
 names:
   0: ring
   1: earring
