@@ -223,3 +223,65 @@ Validation note:
 - This app provides AI-assisted visual grading and similarity cues.
 - Results are not a certified authenticity report.
 - For high-value transactions, use professional gemstone/gold testing.
+
+## Formulas & Calculations
+
+This section documents the exact formulas, constants, and worked examples used by the app so reviewers can reproduce results.
+
+- Image area normalization and visual-score composition (in `UploadFragment`):
+	- areaNorm = detection_box_area / (640 * 640)
+	- confidence = top.score (range 0.0–1.0)
+	- normalized_score = 0.65 * areaNorm + 0.35 * confidence
+
+- Visual → grams mapping (estimator implemented in `UploadFragment`):
+	- grams = baseGrams + normalized_score * scaleGrams
+	- Current constants: baseGrams = 0.5 g, scaleGrams = 8.0 g → grams ≈ 0.5 … 8.5 g
+	- Example: normalized_score = 0.30 → grams = 0.5 + 0.30 * 8.0 = 2.9 g
+
+- Score composition and computedTotalScore (used across `UploadFragment` and `GradeResultFragment`):
+	- component scores: `yoloScore`, `lbpScore`, `orbScore` ∈ [0,100]
+	- visualLikelihood = if any component > 0 then avg(yoloScore, lbpScore, orbScore) else `qualityScore`
+	- When saving a persisted `totalComputedScore`, that value is preferred if > 0; otherwise the average of components is used.
+
+- Stamp detection rules and score adjustment:
+	- Stamp acceptance threshold: stamp.confidence >= 35 (both automatic and closeup paths)
+	- On stamp accepted: newTotal = (visualLikelihood × 1.15), clamped to [0,100] (i.e., +15% effect)
+	- When no stamp: `enrichResult` previously applied a ×0.85 adjustment in some flows; current closeup and initial grading are aligned to the 1.15 multiplier for consistency.
+
+- Gold valuation steps (see `GoldValueEstimate` in `app/src/main/java/com/gabby/studiowebwrapper/model/Models.kt` and `estimateGoldValue` in `GradeResultFragment`):
+	1. purityFraction = karat / 24.0
+	2. pureGoldGrams = weightGrams × purityFraction
+	3. paxgPricePhp = cached PAXG price (fallback DEFAULT_PAXG_PRICE_PHP = 200000 PHP when cache missing)
+	4. phpPerGram24k = paxgPricePhp / TROY_OUNCE_GRAMS (TROY_OUNCE_GRAMS = 31.1034768)
+	5. scrapMid = pureGoldGrams × phpPerGram24k
+	6. scrapLow = scrapMid × (1 − uncertainty); scrapHigh = scrapMid × (1 + uncertainty)
+	7. resaleMultiplier = 1 + (resaleUpliftPercent / 100)
+	8. resaleMid = scrapMid × resaleMultiplier; resaleLow/High analogous
+
+- Uncertainty & resale uplift mapping (used to compute scrap/resale ranges):
+	- Uncertainty fraction by total score:
+		- score ≥ 81 → uncertainty = 0.04 (4%)
+		- score ≥ 61 → uncertainty = 0.07 (7%)
+		- score ≥ 41 → uncertainty = 0.12 (12%)
+		- else → uncertainty = 0.18 (18%)
+	- Resale uplift percent by total score:
+		- score ≥ 81 → 20%
+		- score ≥ 61 → 16%
+		- score ≥ 41 → 12%
+		- else → 8%
+
+- Worked example (end-to-end):
+	- Inputs: normalized_score = 0.30; karat = 18K; paxgPricePhp = 200,000 PHP.
+	- Weight: grams = 0.5 + 0.30 × 8.0 = 2.9 g.
+	- Purity fraction = 18 / 24 = 0.75 → pureGoldGrams = 2.9 × 0.75 = 2.175 g.
+	- phpPerGram24k = 200,000 / 31.1034768 ≈ 6,429.53 PHP/g.
+	- scrapMid = 2.175 × 6,429.53 ≈ 13,992 PHP.
+	- If total score = 70 → uncertainty = 7% → scrapLow ≈ 13,013; scrapHigh ≈ 14,971.
+	- Resale uplift for score 70 → 16% → resaleMid ≈ 16,230 PHP (range ≈ 15,154–17,365).
+
+## References (code)
+
+- Weight estimator and expected weight field: [app/src/main/java/com/gabby/studiowebwrapper/ui/UploadFragment.kt](app/src/main/java/com/gabby/studiowebwrapper/ui/UploadFragment.kt)
+- Stamp application and closeup flow: [app/src/main/java/com/gabby/studiowebwrapper/ui/GradeResultFragment.kt](app/src/main/java/com/gabby/studiowebwrapper/ui/GradeResultFragment.kt)
+- Valuation model and output type: [app/src/main/java/com/gabby/studiowebwrapper/model/Models.kt](app/src/main/java/com/gabby/studiowebwrapper/model/Models.kt)
+

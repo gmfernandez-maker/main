@@ -18,4 +18,117 @@
     <string name="history_undo">Undo</string>
 <!-- Correct Version -->
     <string name="webwrapper_url">https://jwlgrderpixel.vercel.app/</string>
+    <!-- Positive-tone confidence band strings -->
+    <string name="band_0_40_badge">No Significant Evidence</string>
+    <string name="band_0_40_short">No clear markers found to support authenticity.</string>
+    <string name="band_0_40_tooltip">Visual signals (texture, keypoints, stamp) are insufficient to suggest authenticity.</string>
+    <string name="band_0_40_cta_rescan">Rescan (Closeup)</string>
+    <string name="band_0_40_cta_expert">Request Expert</string>
+
+    <string name="band_41_60_badge">Limited Evidence</string>
+    <string name="band_41_60_short">Slight confidence — evidence is weak or partial.</string>
+    <string name="band_41_60_tooltip">Some visual cues were found, but they are not conclusive on their own.</string>
+    <string name="band_41_60_cta_closeup">Capture Stamp Closeup</string>
+    <string name="band_41_60_cta_save">Save &amp; Verify Later</string>
+
+    <string name="band_61_80_badge">Probable Authenticity</string>
+    <string name="band_61_80_short">Likely authentic — strong visual match.</string>
+    <string name="band_61_80_tooltip">Multiple signals agree (texture/shape and possibly stamp); good sign, but not certified.</string>
+    <string name="band_61_80_cta_quote">Get Professional Quote</string>
+    <string name="band_61_80_cta_export">Export Report</string>
+
+    <string name="band_81_100_badge">Very Likely Authentic</string>
+    <string name="band_81_100_short">Strong visual evidence supports authenticity.</string>
+    <string name="band_81_100_tooltip">Multiple independent signals strongly agree; still not a legal appraisal.</string>
+    <string name="band_81_100_cta_export">Export Report</string>
+    <string name="band_81_100_cta_share">Share Listing</string>
+
+    <!-- Microcopy -->
+    <string name="visual_match_primary">Visual Match — %1$d%% (probability estimate)</string>
+    <string name="visual_match_secondary">%1$s • %2$s • %3$s</string>
+    <string name="estimated_range_label">Estimated range</string>
+    <string name="improve_results_title">How to improve results</string>
+    <string name="improve_tip_closeup">Take a dedicated closeup of the hallmark or stamp.</string>
+    <string name="improve_tip_light">Use better lighting and a plain background.</string>
+    <string name="improve_tip_stable">Hold steady and tap to focus before capture.</string>
+    <!-- Conservative-tone variants -->
+    <string name="band_0_40_badge_cons">No Significant Evidence</string>
+    <string name="band_0_40_short_cons">Insufficient evidence. Try a closeup or seek expert verification.</string>
+    <string name="band_0_40_tooltip_cons">Visual signals are insufficient; seek further evidence or an expert.</string>
+    <string name="band_0_40_cta_rescan_cons">Rescan (Closeup)</string>
+
+    <string name="band_41_60_badge_cons">Limited Evidence</string>
+    <string name="band_41_60_short_cons">Some cues present but not conclusive; collect more evidence.</string>
+    <string name="band_41_60_tooltip_cons">Weak or partial signals — try a dedicated closeup for clarity.</string>
+    <string name="band_41_60_cta_closeup_cons">Capture Stamp Closeup</string>
+
+    <string name="band_61_80_badge_cons">Probable Authenticity</string>
+    <string name="band_61_80_short_cons">Probable authenticity — evidence is strong but not certification.</string>
+    <string name="band_61_80_tooltip_cons">Evidence is relatively strong; consult a professional for certification.</string>
+    <string name="band_61_80_cta_quote_cons">Request Expert Quote</string>
+
+    <string name="band_81_100_badge_cons">Very Likely Authentic</string>
+    <string name="band_81_100_short_cons">Strong visual evidence; consult a professional for certification.</string>
+    <string name="band_81_100_tooltip_cons">Multiple independent signals agree; still not a legal appraisal.</string>
+    <string name="band_81_100_cta_export_cons">Export Report</string>
+
+    <!-- UI messages and labels -->
+    <string name="couldnt_read_stamp">Could not read stamp from the selected image. Try a clearer, closer photo.</string>
+    <string name="failed_load_selected_image">Failed to load selected image.</string>
+    <string name="processing">Processing...</string>
+    <string name="add_karat_stamp_closeup">Add Karat Stamp Closeup</string>
+    <string name="take_photo">Take Photo</string>
+    <string name="feedback_sent_thanks">Feedback sent - thanks!</string>
+    <string name="stamp_recognized_msg">Stamp recognized: %1$s - score %2$d%% to %3$d%%</string>
+    <string name="no_recent_results">No recent results. Please grade an item.</string>
+    <string name="tone_now_conservative">Tone: Conservative</string>
+    <string name="tone_now_positive">Tone: Positive</string>
+    <string name="please_select_feedback_option">Please select an option before sending feedback.</string>
+    <!-- General UI strings localized -->
+    <string name="report_number">Report #</string>
+    <string name="details">details</string>
+    <string name="tier_d">Tier D</string>
+    <string name="delete">Delete</string>
+    <string name="user_label">User</string>
+    <string name="selection_label">Selection</string>
+    <string name="comment_label">Comment</string>
+    <string name="meta_label">Meta</string>
+    <string name="welcome_message">Welcome to Jewel Grade. Take a jewelry photo, get a beginner-friendly match estimate, and review the result in plain language.</string>
+    <string name="login">Log In</string>
+    <string name="sign_up">Sign Up</string>
+    <string name="continue_to_upload">Continue to Upload</string>
+    <string name="choose_jewelry_photo">Choose a Jewelry Photo</string>
+    <string name="upload_hint">For best results, use one jewelry item per photo and keep it centered.</string>
+    <string name="choose_image">Choose Image</string>
+    <string name="analyze_photo">Analyze Photo</string>
+    <string name="full_name_hint">Full Name</string>
+    <string name="email_hint">Email</string>
+    <string name="password_hint">Password (min 6 chars)</string>
+    <string name="already_have_account">Already have an account? Log in</string>
+    <string name="create_account">Create Account</string>
+    <string name="weight_input_hint">Item weight (grams)</string>
+    <string name="estimate_value_button">Estimate Value (PHP)</string>
+    <string name="value_estimate_placeholder">Enter item weight and add a karat stamp closeup to estimate scrap and resale value.</string>
+    <string name="value_requires_stamp">Add a karat stamp closeup first before estimating value.</string>
+    <string name="value_requires_weight">Enter a valid weight in grams first.</string>
+    <string name="value_only_for_gold">Value estimate is available for gold items only.</string>
+    <string name="value_stamp_not_parseable">Could not read karat from the stamp. Use a clearer closeup.</string>
+    <string name="value_estimate_summary">Estimated value (PHP, PAXG basis)
+Scrap: %1$s to %2$s (mid: %3$s)
+Resale: %4$s to %5$s (mid: %6$s)
+Inputs: %7$.2fg at %8$.1fK (%9$.2f%% gold)
+Source: PAXG %10$s (1 token = 1 troy ounce)</string>
+     <string name="value_estimate_summary_title">Value calculation</string>
+     <string name="value_label_scrap">Scrap: %1$s</string>
+     <string name="value_label_resale">Resale: %1$s</string>
+    <string name="history_value_saved_label">Saved estimate</string>
+    <string name="history_value_live_label">Live estimate</string>
+    <string name="price_refresh_cache_updated">PAXG price cache updated</string>
+    <string name="price_refreshed">Price refreshed</string>
+    <string name="price_refresh_failed">Failed to refresh price</string>
+    <string name="history_value_not_available">--</string>
+    <string name="history_value_uplift">↑%1$d%% (PAXG)</string>
+    <string name="history_score_label">Score
+%1$d</string>
+    <string name="back">Back</string>
 </resources>

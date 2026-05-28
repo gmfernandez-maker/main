@@ -475,8 +475,8 @@ class UploadFragment : Fragment() {
         } else {
             payload.qualityScore.coerceIn(0, 100)
         }
-        val expectedWeightEstimation = estimateExpectedWeightScore01(pipelineAnalysis?.detections.orEmpty())
-        val stampPassesThreshold = stampResult?.detected == true && stampResult.confidence >= 50
+        val expectedWeightEstimation = estimateExpectedWeightGrams(pipelineAnalysis?.detections.orEmpty())
+        val stampPassesThreshold = stampResult?.detected == true && stampResult.confidence >= 35
         val stampMaterialVerified = verifyStampMaterialConsistency(
             stampResult?.normalizedStamp,
             pipelineAnalysis?.materialScore
@@ -503,7 +503,7 @@ class UploadFragment : Fragment() {
                 add("Pattern clarity score: $keypointClamped/100")
                 add("Visual Likelihood: $visualLikelihood% (average of the three scores above)")
                 add("Capture quality: brightness $brightness, contrast $contrast, sharpness $sharpness")
-                add("Expected weight estimation (0-1 scale): $weight")
+                add("Expected weight estimation (approx): ${weight} g")
                 add("Important: This shows visual similarity only. It is NOT an authenticity verification or professional appraisal.")
                 if (stampMaterialVerified == false) {
                     add("WARNING: Detected stamp does not match the detected material type. This may indicate a mismatch or counterfeit.")
@@ -537,7 +537,7 @@ class UploadFragment : Fragment() {
                 "Detailed quality components are unavailable for this result.",
                 "Final score uses overall quality estimate = $visualLikelihood/100",
                 "Capture metrics: brightness ${"%.1f".format(report.brightnessMean)}, contrast ${"%.1f".format(report.contrastStdDev)}, sharpness ${"%.1f".format(report.sharpnessVariance)}",
-                "Expected weight estimation (0-1): ${"%.2f".format(expectedWeightEstimation)}"
+                "Expected weight estimation (approx): ${"%.2f".format(expectedWeightEstimation)} g"
             )
         }
 
@@ -650,7 +650,10 @@ class UploadFragment : Fragment() {
         )
     }
 
-    private fun estimateExpectedWeightScore01(detections: List<com.gabby.studiowebwrapper.util.Detection>): Float {
+    // Estimate approximate weight in grams from visual detections.
+    // The pipeline produces a 0..1 normalized score; map that to a reasonable grams range.
+    // Mapping: grams = base + score * scale (tunable). Current: base=0.5g, scale=8.0g → range ≈ 0.5–8.5g
+    private fun estimateExpectedWeightGrams(detections: List<com.gabby.studiowebwrapper.util.Detection>): Float {
         if (detections.isEmpty()) return 0f
 
         val top = detections.maxByOrNull { it.score } ?: return 0f
@@ -661,7 +664,12 @@ class UploadFragment : Fragment() {
         val areaNorm = (width * height) / (640f * 640f)
         val confidence = top.score.coerceIn(0f, 1f)
         val score = (0.65f * areaNorm.coerceIn(0f, 1f)) + (0.35f * confidence)
-        return score.coerceIn(0f, 1f)
+        val normalized = score.coerceIn(0f, 1f)
+
+        val baseGrams = 0.5f
+        val scaleGrams = 8.0f
+        val grams = baseGrams + normalized * scaleGrams
+        return grams.coerceAtLeast(0.1f)
     }
 
     private fun sanitizeConsumerText(text: String): String {

@@ -16,7 +16,7 @@
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Choose a Jewelry Photo"
+            android:text="@string/choose_jewelry_photo"
             android:textAppearance="@style/TextAppearance.Material3.HeadlineMedium"
             android:textColor="@color/jg_gold_light"
             android:textStyle="bold" />
@@ -41,7 +41,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="8dp"
-            android:text="For best results, use one jewelry item per photo and keep it centered."
+            android:text="@string/upload_hint"
             android:textColor="@color/jg_text_secondary"
             android:textSize="13sp" />
 
@@ -67,7 +67,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="16dp"
-            android:text="Choose Image" />
+            android:text="@string/choose_image" />
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/takePhotoButton"
@@ -75,7 +75,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="8dp"
-            android:text="Take Photo" />
+            android:text="@string/take_photo" />
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/gradeButton"
@@ -83,7 +83,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="8dp"
-            android:text="Analyze Photo" />
+            android:text="@string/analyze_photo" />
 
         <!-- Back button removed per UX request -->
 

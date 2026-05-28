@@ -38,6 +38,19 @@ class HomeFragment : Fragment() {
     private val gson = Gson()
     private var latestEntry: HistoryEntry? = null
 
+    private fun clampScore(score: Int): Int = score.coerceIn(0, 100)
+
+    private fun computedTotalScore(result: SuggestMetadataOutput): Int {
+        val persistedTotal = clampScore(result.totalComputedScore)
+        if (persistedTotal > 0) return persistedTotal
+
+        val yolo = clampScore(result.yoloScore)
+        val lbp = clampScore(result.lbpScore)
+        val orb = clampScore(result.orbScore)
+        val hasComponents = yolo > 0 || lbp > 0 || orb > 0
+        return if (hasComponents) (yolo + lbp + orb) / 3 else clampScore(result.qualityScore)
+    }
+
     override fun onAttach(context: Context) {
         super.onAttach(context)
         callbacks = context as? Callbacks
@@ -68,7 +81,7 @@ class HomeFragment : Fragment() {
                 } else if (latestEntry != null) {
                     callbacks?.navigateToGradeDetail(latestEntry!!.resultJson, latestEntry!!.previewUri)
                 } else {
-                    android.widget.Toast.makeText(requireContext(), "No recent results. Please grade an item.", android.widget.Toast.LENGTH_SHORT).show()
+                    android.widget.Toast.makeText(requireContext(), getString(R.string.no_recent_results), android.widget.Toast.LENGTH_SHORT).show()
                 }
             }
 
@@ -91,7 +104,8 @@ class HomeFragment : Fragment() {
                 Log.e("HomeFragment", "Failed to load recent preview: $previewUri", e)
                 recentPreviewImage.setImageDrawable(null)
             }
-            recentScoreText.text = "${result.qualityScore.coerceIn(0, 100)}%"
+            val total = computedTotalScore(result)
+            recentScoreText.text = "${total}%"
             val purity = result.purity?.ifBlank { "Unknown" } ?: "Unknown"
             val hasStampEvidence = result.stampDetected && !result.stampText.isNullOrBlank()
             recentMaterialText.text = purity
@@ -131,7 +145,7 @@ class HomeFragment : Fragment() {
                 entries.mapNotNull { entry ->
                     runCatching {
                         val parsed = gson.fromJson(entry.resultJson, SuggestMetadataOutput::class.java)
-                        val score = parsed.qualityScore
+                        val score = computedTotalScore(parsed)
                         val karat = parsed.purity?.ifBlank { "Unknown" } ?: "Unknown"
                         val stampLabel = if (parsed.stampDetected && !parsed.stampText.isNullOrBlank()) {
                             "karat stamp: ${parsed.stampText} (${parsed.stampConfidence}%)"

@@ -9,6 +9,8 @@
     <color name="jg_text_primary">#1D1708</color>
     <color name="jg_text_secondary">#6B5730</color>
     <color name="jg_error">#FF6B6B</color>
+    <color name="jg_positive">#26D07C</color>
+    <color name="jg_negative">#FF6B6B</color>
 
     <color name="jg_bg_gradient_start">#FFFCF2</color>
     <color name="jg_bg_gradient_mid">#F8F0D9</color>

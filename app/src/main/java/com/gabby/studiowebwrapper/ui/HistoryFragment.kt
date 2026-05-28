@@ -23,6 +23,9 @@ import com.google.android.material.chip.Chip
 import com.google.android.material.chip.ChipGroup
 import com.google.android.material.snackbar.Snackbar
 import com.google.gson.Gson
+import androidx.lifecycle.lifecycleScope
+import com.gabby.studiowebwrapper.data.PaxgPriceRepository
+import kotlinx.coroutines.launch
 
 class HistoryFragment : Fragment() {
 
@@ -55,6 +58,7 @@ class HistoryFragment : Fragment() {
 
         val recycler = view.findViewById<RecyclerView>(R.id.recyclerHistory)
         val tierChipGroup = view.findViewById<ChipGroup>(R.id.filterChipGroup)
+        val swipe = view.findViewById<androidx.swiperefreshlayout.widget.SwipeRefreshLayout>(R.id.swipeRefresh)
         adapter = HistoryAdapter(
             onClick = { entry: HistoryEntry ->
                 callbacks?.navigateToGradeDetail(entry.resultJson, entry.previewUri)
@@ -72,6 +76,19 @@ class HistoryFragment : Fragment() {
         viewModel.history.observe(viewLifecycleOwner) { list ->
             allEntries = list
             applyTierFilter()
+        }
+
+        // Pull-to-refresh: refresh cached PAXG price and update live prices shown in history
+        swipe.setOnRefreshListener {
+            swipe.isRefreshing = true
+            viewLifecycleOwner.lifecycleScope.launch {
+                val fetched = try { PaxgPriceRepository.fetchAndCachePricePhp(requireContext()) } catch (e: Exception) { null }
+                // Force adapter rebind so live prices are recomputed using the new cache
+                adapter.notifyDataSetChanged()
+                swipe.isRefreshing = false
+                val msg = if (fetched != null) getString(R.string.price_refreshed) else getString(R.string.price_refresh_failed)
+                Toast.makeText(requireContext(), msg, Toast.LENGTH_SHORT).show()
+            }
         }
     }
 

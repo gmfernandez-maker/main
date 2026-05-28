@@ -9,7 +9,7 @@
         android:id="@+id/textReportTitle"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Report #"
+        android:text="@string/report_number"
         android:textStyle="bold"
         android:textSize="16sp" />
 
@@ -17,7 +17,7 @@
         android:id="@+id/textReportDetails"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="details"
+        android:text="@string/details"
         android:textSize="14sp"
         android:paddingTop="4dp" />
 

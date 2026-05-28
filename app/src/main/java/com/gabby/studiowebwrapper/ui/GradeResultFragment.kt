@@ -18,6 +18,9 @@ import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.launch
+import androidx.work.*
+import java.util.concurrent.TimeUnit
+import com.gabby.studiowebwrapper.data.PaxgPriceRepository
 import android.animation.ObjectAnimator
 import com.google.android.material.snackbar.Snackbar
 import androidx.fragment.app.Fragment
@@ -26,6 +29,7 @@ import com.gabby.studiowebwrapper.R
 import com.gabby.studiowebwrapper.data.AppDatabase
 import com.gabby.studiowebwrapper.data.NativeRepository
 import com.gabby.studiowebwrapper.databinding.FragmentGradeResultBinding
+import com.gabby.studiowebwrapper.model.GoldValueEstimate
 import com.gabby.studiowebwrapper.model.SuggestMetadataOutput
 import com.gabby.studiowebwrapper.model.YoloDetectionOutput
 import com.gabby.studiowebwrapper.util.ImageUtils
@@ -36,8 +40,15 @@ import kotlinx.coroutines.withContext
 import android.widget.ArrayAdapter
 import android.widget.AdapterView
 import android.widget.Spinner
+import com.gabby.studiowebwrapper.data.PaxgPrefs
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
+import java.text.NumberFormat
 
 class GradeResultFragment : Fragment() {
+    private val DEFAULT_PAXG_PRICE_PHP = 200000.0
+    private val TROY_OUNCE_GRAMS = 31.1034768
     private var originalPreviewBitmap: Bitmap? = null
     private var boxedPreviewBitmap: Bitmap? = null
     private var hasDetectionOverlay: Boolean = false
@@ -108,6 +119,40 @@ class GradeResultFragment : Fragment() {
         }
     }
 
+    private fun bandStringResForScore(score: Int): Int {
+        return when {
+            score >= 81 -> R.string.band_81_100_badge
+            score >= 61 -> R.string.band_61_80_badge
+            score >= 41 -> R.string.band_41_60_badge
+            else -> R.string.band_0_40_badge
+        }
+    }
+
+    private fun bandPrimaryCtaResForScore(score: Int): Int {
+        return when {
+            score >= 81 -> if (conservativeTone) R.string.band_81_100_cta_export_cons else R.string.band_81_100_cta_export
+            score >= 61 -> if (conservativeTone) R.string.band_61_80_cta_quote_cons else R.string.band_61_80_cta_quote
+            score >= 41 -> if (conservativeTone) R.string.band_41_60_cta_closeup_cons else R.string.band_41_60_cta_closeup
+            else -> if (conservativeTone) R.string.band_0_40_cta_rescan_cons else R.string.band_0_40_cta_rescan
+        }
+    }
+
+    private fun bandShortMessageResForScore(score: Int): Int {
+        return when {
+            score >= 81 -> if (conservativeTone) R.string.band_81_100_short_cons else R.string.band_81_100_short
+            score >= 61 -> if (conservativeTone) R.string.band_61_80_short_cons else R.string.band_61_80_short
+            score >= 41 -> if (conservativeTone) R.string.band_41_60_short_cons else R.string.band_41_60_short
+            else -> if (conservativeTone) R.string.band_0_40_short_cons else R.string.band_0_40_short
+        }
+    }
+
+    private fun evidenceSecondaryLine(result: SuggestMetadataOutput): String {
+        val yolo = if (clampScore(result.yoloScore) > 0) "YOLO" else "YOLO"
+        val texture = if (clampScore(result.lbpScore) > 0) "Texture" else "Texture"
+        val stamp = if (result.stampDetected && !result.stampText.isNullOrBlank()) "Stamp (✓)" else "Stamp (—)"
+        return getString(R.string.visual_match_secondary, yolo, texture, stamp)
+    }
+
     private fun gradingCriteriaText(): String {
         return "Simple guide\n" +
             "Very Close Match: 85%+\n" +
@@ -115,6 +160,183 @@ class GradeResultFragment : Fragment() {
             "Some Similarity: 55-69%\n" +
             "Low Match: below 55%\n\n" +
             "This is a photo-based estimate, not a certified appraisal."
+    }
+
+    private fun isGoldItem(result: SuggestMetadataOutput): Boolean {
+        val materialText = result.material.lowercase(Locale.ROOT)
+        val purityText = result.purity.orEmpty().lowercase(Locale.ROOT)
+        return materialText.contains("gold") || purityText.contains("k") || purityText.contains("karat")
+    }
+
+    private fun extractKaratFromStamp(stampText: String): Double? {
+        val stamp = stampText.uppercase(Locale.ROOT)
+        val match = Regex("(\\d{1,2}(?:\\.\\d+)?)\\s*K").find(stamp)
+        if (match != null) {
+            return match.groupValues.getOrNull(1)?.toDoubleOrNull()?.coerceIn(1.0, 24.0)
+        }
+        return when {
+            stamp.contains("999") || stamp.contains("24K") -> 24.0
+            stamp.contains("916") || stamp.contains("22K") -> 22.0
+            stamp.contains("875") || stamp.contains("21K") -> 21.0
+            stamp.contains("750") || stamp.contains("18K") -> 18.0
+            stamp.contains("585") || stamp.contains("14K") -> 14.0
+            stamp.contains("417") || stamp.contains("10K") -> 10.0
+            else -> null
+        }
+    }
+
+    private fun estimateGoldValue(
+        result: SuggestMetadataOutput,
+        weightGrams: Double,
+        karat: Double
+    ): GoldValueEstimate {
+        val purityFraction = (karat / 24.0).coerceIn(0.1, 1.0)
+        val pureGoldGrams = weightGrams * purityFraction
+        val paxgPricePhp = PaxgPriceRepository.getCachedPricePhp(requireContext()) ?: DEFAULT_PAXG_PRICE_PHP
+        val phpPerGram24k = paxgPricePhp / TROY_OUNCE_GRAMS
+        val scrapMid = pureGoldGrams * phpPerGram24k
+
+        val score = computedTotalScore(result)
+        val uncertainty = when {
+            score >= 81 -> 0.04
+            score >= 61 -> 0.07
+            score >= 41 -> 0.12
+            else -> 0.18
+        }
+        val resaleUpliftPercent = when {
+            score >= 81 -> 20
+            score >= 61 -> 16
+            score >= 41 -> 12
+            else -> 8
+        }
+
+        val scrapLow = scrapMid * (1.0 - uncertainty)
+        val scrapHigh = scrapMid * (1.0 + uncertainty)
+        val resaleMultiplier = 1.0 + (resaleUpliftPercent / 100.0)
+        val resaleLow = scrapLow * resaleMultiplier
+        val resaleMid = scrapMid * resaleMultiplier
+        val resaleHigh = scrapHigh * resaleMultiplier
+
+        return GoldValueEstimate(
+            paxgPricePhp = paxgPricePhp,
+            phpPerGram24k = phpPerGram24k,
+            purityFraction = purityFraction,
+            weightGrams = weightGrams,
+            pureGoldGrams = pureGoldGrams,
+            scrapLowPhp = scrapLow,
+            scrapMidPhp = scrapMid,
+            scrapHighPhp = scrapHigh,
+            resaleLowPhp = resaleLow,
+            resaleMidPhp = resaleMid,
+            resaleHighPhp = resaleHigh,
+            resaleUpliftPercent = resaleUpliftPercent,
+            computedAtEpochMs = System.currentTimeMillis()
+        )
+    }
+
+    private fun formatPhp(amount: Double): String {
+        val nf = NumberFormat.getNumberInstance(Locale.US)
+        nf.minimumFractionDigits = 2
+        nf.maximumFractionDigits = 2
+        return "₱${nf.format(amount)}"
+    }
+
+    private fun renderValueEstimate(result: SuggestMetadataOutput) {
+        val estimate = result.goldValueEstimate
+        val viewBinding = binding ?: return
+        if (estimate == null) {
+            viewBinding.textScrapValue.text = getString(R.string.value_estimate_placeholder)
+            viewBinding.textResaleValue.text = ""
+            viewBinding.valueInfoButton.visibility = View.GONE
+            return
+        }
+        // Show only the mid scrap and mid resale values in the compact view
+        viewBinding.textScrapValue.text = getString(R.string.value_label_scrap, formatPhp(estimate.scrapMidPhp))
+        viewBinding.textResaleValue.text = getString(R.string.value_label_resale, formatPhp(estimate.resaleMidPhp))
+        viewBinding.valueInfoButton.visibility = View.VISIBLE
+        viewBinding.valueInfoButton.setOnClickListener {
+            // Build a cleaner, step-by-step calculation breakdown
+            val nf = java.text.NumberFormat.getNumberInstance(Locale.getDefault()).apply {
+                minimumFractionDigits = 2
+                maximumFractionDigits = 2
+            }
+
+            val karat = (estimate.purityFraction * 24.0)
+            val purityPct = (estimate.purityFraction * 100.0)
+            val pureGrams = estimate.pureGoldGrams
+            val paxgPerTroy = estimate.paxgPricePhp
+            val perGram = estimate.phpPerGram24k
+            val scrapMid = estimate.scrapMidPhp
+            val scrapLow = estimate.scrapLowPhp
+            val scrapHigh = estimate.scrapHighPhp
+            val resaleMid = estimate.resaleMidPhp
+            val resaleLow = estimate.resaleLowPhp
+            val resaleHigh = estimate.resaleHighPhp
+            val uplift = estimate.resaleUpliftPercent
+
+            val msg = StringBuilder()
+            msg.append("Calculation steps:\n\n")
+            msg.append("1) Pure gold mass:\n")
+            msg.append(String.format(Locale.getDefault(), "   pure grams = weight × (karat / 24) = %.2fg × (%.1f / 24) = %.3fg\n", estimate.weightGrams, karat, pureGrams))
+            msg.append("\n")
+            msg.append("2) PAXG price:\n")
+            msg.append(String.format(Locale.getDefault(), "   source: PAXG %s (per token ≈ 1 troy oz)\n", formatPhp(paxgPerTroy)))
+            msg.append(String.format(Locale.getDefault(), "   price per gram (24K) = %s / %.4f g = %s per g\n", formatPhp(paxgPerTroy), TROY_OUNCE_GRAMS, formatPhp(perGram)))
+            msg.append("\n")
+            msg.append("3) Scrap (melt) value:\n")
+            msg.append(String.format(Locale.getDefault(), "   scrap (mid) = pure grams × price_per_g = %s × %s = %s\n", nf.format(pureGrams), formatPhp(perGram), formatPhp(scrapMid)))
+            msg.append(String.format(Locale.getDefault(), "   scrap range = %s – %s (uncertainty applied)\n", formatPhp(scrapLow), formatPhp(scrapHigh)))
+            msg.append("\n")
+            msg.append("4) Resale estimate:\n")
+            msg.append(String.format(Locale.getDefault(), "   resale uplift = %d%% → resale (mid) = scrap_mid × (1 + uplift) = %s\n", uplift, formatPhp(resaleMid)))
+            msg.append(String.format(Locale.getDefault(), "   resale range = %s – %s\n", formatPhp(resaleLow), formatPhp(resaleHigh)))
+            msg.append("\n")
+            msg.append(String.format(Locale.getDefault(), "Inputs: weight = %.2fg, karat = %.1fK (%.1f%% purity)\n", estimate.weightGrams, karat, purityPct))
+
+            androidx.appcompat.app.AlertDialog.Builder(requireContext())
+                .setTitle(R.string.value_estimate_summary_title)
+                .setMessage(msg.toString())
+                .setPositiveButton(android.R.string.ok, null)
+                .show()
+        }
+    }
+
+    private fun onEstimateValueClicked() {
+        val base = currentResult ?: return
+        if (!isGoldItem(base)) {
+            Toast.makeText(requireContext(), getString(R.string.value_only_for_gold), Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        val stampText = base.stampText
+        if (!base.stampDetected || stampText.isNullOrBlank()) {
+            Toast.makeText(requireContext(), getString(R.string.value_requires_stamp), Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        val karat = extractKaratFromStamp(stampText)
+        if (karat == null) {
+            Toast.makeText(requireContext(), getString(R.string.value_stamp_not_parseable), Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        val weight = binding?.weightInput?.text?.toString()?.trim()?.toDoubleOrNull()
+        if (weight == null || weight <= 0.0) {
+            Toast.makeText(requireContext(), getString(R.string.value_requires_weight), Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        val estimate = estimateGoldValue(base, weight, karat)
+        val updated = base.copy(
+            userWeightGrams = weight.toFloat(),
+            goldValueEstimate = estimate
+        )
+        currentResult = updated
+        updateUiWithResult(updated)
+
+        viewLifecycleOwner.lifecycleScope.launch {
+            persistUpdatedHistoryEntry(updated)
+        }
     }
 
     interface Callbacks {
@@ -126,6 +348,9 @@ class GradeResultFragment : Fragment() {
     private var callbacks: Callbacks? = null
     private var binding: FragmentGradeResultBinding? = null
     private val gson = Gson()
+    private var conservativeTone: Boolean = false
+    private val PREFS_NAME = "jg_prefs"
+    private val PREF_KEY_CONSERVATIVE = "pref_tone_conservative"
 
     override fun onAttach(context: Context) {
         super.onAttach(context)
@@ -146,15 +371,20 @@ class GradeResultFragment : Fragment() {
         pickStampLauncher = registerForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
             if (uri == null) return@registerForActivityResult
             lifecycleScope.launch {
-                val bmp = decodePreviewBitmap(uri.toString()) ?: runCatching {
-                    requireContext().contentResolver.openInputStream(uri)?.use { BitmapFactory.decodeStream(it) }
-                }.getOrNull()
-                if (bmp != null) {
-                    val stampResult = runCatching { com.gabby.studiowebwrapper.util.StampOcr.detectStamp(bmp) }.getOrNull()
-                    if (stampResult != null) applyStampCloseupResult(stampResult)
-                    else Toast.makeText(requireContext(), "Couldn't read stamp from the selected image.", Toast.LENGTH_SHORT).show()
-                } else {
-                    Toast.makeText(requireContext(), "Failed to load selected image.", Toast.LENGTH_SHORT).show()
+                setStampPickerLoading(true)
+                try {
+                    val bmp = decodePreviewBitmap(uri.toString()) ?: runCatching {
+                        requireContext().contentResolver.openInputStream(uri)?.use { BitmapFactory.decodeStream(it) }
+                    }.getOrNull()
+                    if (bmp != null) {
+                        val stampResult = runCatching { com.gabby.studiowebwrapper.util.StampOcr.detectStamp(bmp) }.getOrNull()
+                        if (stampResult != null) applyStampCloseupResult(stampResult)
+                        else Toast.makeText(requireContext(), getString(R.string.couldnt_read_stamp), Toast.LENGTH_SHORT).show()
+                    } else {
+                        Toast.makeText(requireContext(), getString(R.string.failed_load_selected_image), Toast.LENGTH_SHORT).show()
+                    }
+                } finally {
+                    setStampPickerLoading(false)
                 }
             }
         }
@@ -192,22 +422,39 @@ class GradeResultFragment : Fragment() {
             toggleDetectionsButton.setOnClickListener { togglePreviewMode() }
             updateToggleButtonState()
 
+            // Load tone preference
+            conservativeTone = requireContext().getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+                .getBoolean(PREF_KEY_CONSERVATIVE, false)
+
+            // Allow quick toggle of tone by tapping the badge (no extra UI required)
+            tierBadgeText.setOnClickListener {
+                conservativeTone = !conservativeTone
+                requireContext().getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit()
+                    .putBoolean(PREF_KEY_CONSERVATIVE, conservativeTone).apply()
+                val toneMsg = if (conservativeTone) getString(R.string.tone_now_conservative) else getString(R.string.tone_now_positive)
+                Toast.makeText(requireContext(), toneMsg, Toast.LENGTH_SHORT).show()
+                updateUiWithResult(currentResult ?: result)
+            }
+
             try {
                 val total = computedTotalScore(result)
                 val band = likelihoodBandForScore(total)
                 val (rangeMin, rangeMax) = calculateConfidenceRange(result)
                 
-                // Main score display - show confidence range only if stamp detected
-                val scoreDisplay = if (result.stampDetected) {
-                    "Visual Match: $total% (±${(rangeMax - rangeMin) / 2}%)"
-                } else {
-                    "Visual Match: $total%"
+                // Main score display - use localized microcopy and show estimated range when stamp detected
+                totalScoreText.text = getString(R.string.visual_match_primary, total)
+                if (result.stampDetected) {
+                    val halfRange = (rangeMax - rangeMin) / 2
+                    totalScoreText.append(" • ${getString(R.string.estimated_range_label)}: ±${halfRange}%")
                 }
-                totalScoreText.text = scoreDisplay
+                // Secondary evidence line
+                modelUsedText.text = evidenceSecondaryLine(result)
                 overallScoreBar.progress = total
 
                 // Assessment level badge
-                tierBadgeText.text = "Likelihood Level: $band"
+                // Badge text and background
+                val bandRes = bandStringResForScore(total)
+                tierBadgeText.text = getString(bandRes)
                 tierBadgeText.setBackgroundResource(badgeBackgroundForBand(band))
 
                 val topDetection = result.yoloDetections.orEmpty().maxByOrNull { it.score }
@@ -225,15 +472,67 @@ class GradeResultFragment : Fragment() {
 
                 materialText.text = resolvedStampLabel(result)
                 karatBasisText.text = resolvedStampBasis(result)
+                bandShortMessageText.text = getString(bandShortMessageResForScore(total))
+                if (weightInput.text.isNullOrBlank()) {
+                    val seedWeight = result.userWeightGrams ?: result.expectedWeightGrams
+                    if (seedWeight != null && seedWeight > 0f) {
+                        weightInput.setText(String.format(Locale.US, "%.2f", seedWeight))
+                    }
+                }
                 analysisText.text = buildUserFacingAnalysis(result)
+                renderValueEstimate(result)
                 
                 advancedMetricsButton.setOnClickListener {
                     callbacks?.openAdvancedMetrics(Gson().toJson(result), previewDataUri)
                 }
 
                 addStampButton.setOnClickListener {
-                    pickStampLauncher.launch("image/*")
+                    showStampPickerInstructionDialog()
                 }
+
+                estimateValueButton.setOnClickListener {
+                    onEstimateValueClicked()
+                }
+
+                // Save demo API key provided by user so worker can use it
+                try {
+                    PaxgPrefs.saveApiKey(requireContext(), "CG-XhbiPwxgu9txJofb1TcyzVQ6")
+                } catch (_: Exception) {}
+
+                // Price last-updated display and manual refresh
+                        fun updatePriceUpdatedView() {
+                            val last = PaxgPrefs.getLastUpdatedMs(requireContext())
+                            val price = PaxgPriceRepository.getCachedPricePhp(requireContext())
+                            val txt = if (price != null && last > 0L) {
+                                val fmt = SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault())
+                                val nf = NumberFormat.getNumberInstance(Locale.US).apply { minimumFractionDigits = 2; maximumFractionDigits = 2 }
+                                "₱${nf.format(price)} / PAXG • Updated: ${fmt.format(Date(last))}"
+                            } else if (last > 0L) {
+                                val fmt = SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault())
+                                "Price cached • Updated: ${fmt.format(Date(last))}"
+                            } else {
+                                "Price not available"
+                            }
+                            textPriceUpdated.text = txt
+                        }
+
+                        updatePriceUpdatedView()
+
+                        btnPriceRefresh.setOnClickListener {
+                            it.isEnabled = false
+                            lifecycleScope.launch {
+                                val fetched = PaxgPriceRepository.fetchAndCachePricePhp(requireContext())
+                                updatePriceUpdatedView()
+                                // update the value labels using the fresh cache
+                                renderValueEstimate(currentResult ?: result)
+                                it.isEnabled = true
+                                val msg = if (fetched != null) getString(R.string.price_refresh_cache_updated) else getString(R.string.price_refresh_failed)
+                                Toast.makeText(requireContext(), msg, Toast.LENGTH_SHORT).show()
+                            }
+                        }
+
+                // Always show "Add Karat Stamp Closeup" for the stamp button
+                addStampButton.text = getString(R.string.add_karat_stamp_closeup)
 
                 rescanSuggestionsText.text = buildRescanSuggestionsText(result, total)
 
@@ -250,7 +549,7 @@ class GradeResultFragment : Fragment() {
                     }
 
                     if (selection == null) {
-                        Toast.makeText(requireContext(), "Please select an option before sending feedback.", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(requireContext(), getString(R.string.please_select_feedback_option), Toast.LENGTH_SHORT).show()
                         return@setOnClickListener
                     }
 
@@ -289,7 +588,7 @@ class GradeResultFragment : Fragment() {
                             }
                         }
 
-                        Snackbar.make(binding?.root ?: view, "Feedback sent — thanks!", Snackbar.LENGTH_LONG).show()
+                        Snackbar.make(binding?.root ?: view, getString(R.string.feedback_sent_thanks), Snackbar.LENGTH_LONG).show()
                         // Optionally clear comment and selection
                         feedbackRadioGroup.clearCheck()
                         feedbackComment.text?.clear()
@@ -302,6 +601,22 @@ class GradeResultFragment : Fragment() {
                 } catch (_: Exception) {}
             }
         }
+
+        // Schedule hourly PAXG price updates (best-effort). Keep existing scheduled work if present.
+        try {
+            val constraints = Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED).build()
+            val work = PeriodicWorkRequestBuilder<com.gabby.studiowebwrapper.worker.PaxgPriceWorker>(1, TimeUnit.HOURS)
+                .setConstraints(constraints)
+                .build()
+            WorkManager.getInstance(requireContext()).enqueueUniquePeriodicWork("paxg_price", ExistingPeriodicWorkPolicy.KEEP, work)
+
+            // Warm cache once in background (best-effort)
+            lifecycleScope.launch {
+                try {
+                    PaxgPriceRepository.fetchAndCachePricePhp(requireContext())
+                } catch (_: Exception) {}
+            }
+        } catch (_: Exception) {}
     }
 
 
@@ -452,10 +767,32 @@ class GradeResultFragment : Fragment() {
         return mutable
     }
 
+    private fun showStampPickerInstructionDialog() {
+        androidx.appcompat.app.AlertDialog.Builder(requireContext())
+            .setTitle(getString(R.string.add_karat_stamp_closeup))
+            .setMessage(getString(R.string.add_karat_stamp_closeup) + "\n\n" + getString(R.string.improve_tip_closeup))
+            .setPositiveButton(getString(R.string.take_photo)) { _, _ ->
+                pickStampLauncher.launch("image/*")
+            }
+            .setNegativeButton(getString(R.string.history_delete_cancel)) { d, _ -> d.dismiss() }
+            .show()
+    }
+
+    private fun setStampPickerLoading(isLoading: Boolean) {
+        binding?.apply {
+            addStampButton.isEnabled = !isLoading
+            if (isLoading) {
+                addStampButton.text = getString(R.string.processing)
+            } else {
+                addStampButton.text = getString(R.string.add_karat_stamp_closeup)
+            }
+        }
+    }
+
     private fun applyStampCloseupResult(stamp: com.gabby.studiowebwrapper.util.StampOcrResult) {
         val prev = currentResult ?: return
         val prevTotal = computedTotalScore(prev)
-        val stampDetected = stamp.detected && (stamp.confidence >= 50f)
+        val stampDetected = stamp.detected && (stamp.confidence >= 35f)
         var updated = prev.copy()
         if (stampDetected) {
             updated = updated.copy(
@@ -464,8 +801,20 @@ class GradeResultFragment : Fragment() {
                 stampDetected = true
             )
         }
-        val newTotal = if (stampDetected) (prevTotal + 10).coerceAtMost(100) else prevTotal
-        updated = updated.copy(qualityScore = newTotal, totalComputedScore = newTotal)
+
+        // Compute visual likelihood similar to the initial grading path and apply same multiplier
+        val yolo = prev.yoloScore.coerceIn(0, 100)
+        val lbp = prev.lbpScore.coerceIn(0, 100)
+        val orb = prev.orbScore.coerceIn(0, 100)
+        val hasComponents = yolo > 0 || lbp > 0 || orb > 0
+        val visualLikelihood = if (hasComponents) (yolo + lbp + orb) / 3 else prev.qualityScore.coerceIn(0, 100)
+
+        val newTotal = if (stampDetected) (visualLikelihood * 1.15f).coerceIn(0f, 100f).toInt() else prevTotal
+        updated = updated.copy(
+            qualityScore = newTotal,
+            totalComputedScore = newTotal,
+            goldValueEstimate = null
+        )
         currentResult = updated
 
         updateUiWithResult(updated, previousScore = prevTotal)
@@ -476,9 +825,9 @@ class GradeResultFragment : Fragment() {
 
         // Show transient confirmation snackbar with details
         val snackMsg = if (stampDetected) {
-            "Stamp recognized: ${stamp.normalizedStamp ?: "unknown"} — score $prevTotal% → ${updated.totalComputedScore}%"
+            getString(R.string.stamp_recognized_msg, stamp.normalizedStamp ?: "unknown", prevTotal, updated.totalComputedScore)
         } else {
-            "Stamp not confidently recognized. No score change."
+            getString(R.string.couldnt_read_stamp)
         }
         val root = binding?.root ?: view ?: requireActivity().window.decorView.rootView
         Snackbar.make(root, snackMsg, Snackbar.LENGTH_LONG).show()
@@ -486,25 +835,35 @@ class GradeResultFragment : Fragment() {
 
     private suspend fun persistUpdatedHistoryEntry(updated: SuggestMetadataOutput) {
         val context = context ?: return
+        // Allow persisting updates for local history entries even if the user is not authenticated.
+        // Use the preview URI or sourceHash to locate the original history entry inserted earlier.
         val userId = NativeRepository.getCurrentUser(context)?.id.orEmpty()
-        if (userId.isBlank()) return
-
         val previewRef = arguments?.getString(ARG_PREVIEW_DATA_URI).orEmpty()
         if (previewRef.isBlank() && updated.sourceHash.isNullOrBlank()) return
 
         withContext(Dispatchers.IO) {
-            val dao = AppDatabase.getInstance(context).historyDao()
-            val existing = if (!updated.sourceHash.isNullOrBlank()) {
-                dao.findLatestByUserAndSourceHash(userId, updated.sourceHash)
-            } else {
-                dao.findLatestByUserAndPreviewUri(userId, previewRef)
-            } ?: return@withContext
+            try {
+                val dao = AppDatabase.getInstance(context).historyDao()
+                val existing = if (!updated.sourceHash.isNullOrBlank()) {
+                    // Try to find by sourceHash first (most reliable)
+                    dao.findLatestByUserAndSourceHash(userId, updated.sourceHash)
+                        ?: dao.findLatestByUserAndSourceHash("", updated.sourceHash)
+                } else {
+                    // Fallback to previewUri. Try with current userId, then without.
+                    dao.findLatestByUserAndPreviewUri(userId, previewRef)
+                        ?: dao.findLatestByUserAndPreviewUri("", previewRef)
+                }
 
-            val merged = existing.copy(
-                sourceHash = updated.sourceHash ?: existing.sourceHash,
-                resultJson = Gson().toJson(updated)
-            )
-            dao.insert(merged)
+                if (existing == null) return@withContext
+
+                val merged = existing.copy(
+                    sourceHash = updated.sourceHash ?: existing.sourceHash,
+                    resultJson = Gson().toJson(updated)
+                )
+                dao.insert(merged)
+            } catch (e: Exception) {
+                Log.w("GradeResultFragment", "Failed to persist updated history entry", e)
+            }
         }
     }
 
@@ -512,7 +871,8 @@ class GradeResultFragment : Fragment() {
         binding?.apply {
             val total = computedTotalScore(result)
             val band = likelihoodBandForScore(total)
-            tierBadgeText.text = "Match level: $band"
+            val bandRes = bandStringResForScore(total)
+            tierBadgeText.text = getString(bandRes)
             tierBadgeText.setBackgroundResource(badgeBackgroundForBand(band))
 
             if (previousScore != null) {
@@ -521,18 +881,27 @@ class GradeResultFragment : Fragment() {
                 // Only display the delta change when a karat stamp was detected by the user
                 if (result.stampDetected) {
                     val deltaStr = if (delta > 0) "+$delta" else if (delta < 0) "$delta" else "+0"
-                    totalScoreText.text = "Visual Match: $total% ($deltaStr)"
+                    totalScoreText.text = getString(R.string.visual_match_primary, total)
+                    totalScoreText.append(" ($deltaStr)")
+                    val (rangeMin, rangeMax) = calculateConfidenceRange(result)
+                    val halfRange = (rangeMax - rangeMin) / 2
+                    totalScoreText.append(" • ${getString(R.string.estimated_range_label)}: ±${halfRange}%")
                 } else {
-                    totalScoreText.text = "Visual Match: $total%"
+                    totalScoreText.text = getString(R.string.visual_match_primary, total)
                 }
             } else {
                 overallScoreBar.progress = total
-                totalScoreText.text = "Visual Match: $total%"
+                totalScoreText.text = getString(R.string.visual_match_primary, total)
             }
+
+            // Secondary evidence line
+            modelUsedText.text = evidenceSecondaryLine(result)
 
             materialText.text = resolvedStampLabel(result)
             karatBasisText.text = resolvedStampBasis(result)
+            bandShortMessageText.text = getString(bandShortMessageResForScore(total))
             analysisText.text = buildUserFacingAnalysis(result)
+            renderValueEstimate(result)
             rescanSuggestionsText.text = buildRescanSuggestionsText(result, total)
         }
     }

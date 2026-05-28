@@ -40,6 +40,24 @@ data class YoloDetectionOutput(
     val y2: Float
 )
 
+data class GoldValueEstimate(
+    val currencyCode: String = "PHP",
+    val priceSource: String = "PAXG",
+    val paxgPricePhp: Double,
+    val phpPerGram24k: Double,
+    val purityFraction: Double,
+    val weightGrams: Double,
+    val pureGoldGrams: Double,
+    val scrapLowPhp: Double,
+    val scrapMidPhp: Double,
+    val scrapHighPhp: Double,
+    val resaleLowPhp: Double,
+    val resaleMidPhp: Double,
+    val resaleHighPhp: Double,
+    val resaleUpliftPercent: Int,
+    val computedAtEpochMs: Long
+)
+
 data class SuggestMetadataOutput(
     val material: String,
     val purity: String? = null,
@@ -70,7 +88,11 @@ data class SuggestMetadataOutput(
     // Capture/quality warnings surfaced from pre-grade guardrails.
     val captureWarnings: List<String>? = null,
     // Actionable guidance shown when users should rescan.
-    val rescanSuggestions: List<String>? = null
+    val rescanSuggestions: List<String>? = null,
+    // User-provided weight used for value estimation.
+    val userWeightGrams: Float? = null,
+    // Estimated scrap + resale valuation snapshot.
+    val goldValueEstimate: GoldValueEstimate? = null
 )
 
 data class GradeRequest(
