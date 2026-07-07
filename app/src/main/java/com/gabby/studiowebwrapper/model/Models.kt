@@ -68,11 +68,11 @@ data class SuggestMetadataOutput(
     val qualityScore: Int,
     val analysis: String,
     val similarProducts: List<SimilarProduct>? = null,
-    // Algorithm-specific scores (client-side sample values)
+    // Algorithm-specific scores produced by the local grading pipeline.
     val yoloScore: Int = 0,
     val lbpScore: Int = 0,
     val orbScore: Int = 0,
-    // Estimated physical weight (grams) inferred from visual features (sample)
+    // Estimated physical weight (grams) inferred from visual features.
     val expectedWeightGrams: Float? = null
     ,
     // Stable hash of the submitted source image, used to suppress duplicate history rows.

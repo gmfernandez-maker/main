@@ -20,6 +20,7 @@ import com.gabby.studiowebwrapper.model.SuggestMetadataOutput
 import com.google.gson.Gson
 import java.text.DateFormat
 import java.util.Date
+import java.util.Locale
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -118,23 +119,23 @@ class HomeFragment : Fragment() {
                 "No clear karat stamp"
             }
             recentAnalysisText.text = buildString {
-                append("• Type: $jewelryType\n")
-                append("• Karat estimate: $purity\n")
-                append("• Stamp: $stampSummary\n")
-                append("• Note: This is a visual estimate, not a certification.")
+                append("- Type: $jewelryType\n")
+                append("- Karat estimate: $purity\n")
+                append("- Stamp: $stampSummary\n")
+                append("- Note: This is a visual estimate, not a certification.")
             }
         }
     }
 
     private data class HistoryCard(
         val title: String,
-        val scoreLabel: String,
         val karatLabel: String,
         val stampLabel: String,
         val resultJson: String,
         val previewUri: String,
         val timestamp: Long,
-        val scoreValue: Int?
+        val scoreValue: Int?,
+        val hasStampEvidence: Boolean
     )
 
     private fun loadPastResultsAndStats(recentResultJson: String?, recentPreviewUri: String?) {
@@ -147,7 +148,8 @@ class HomeFragment : Fragment() {
                         val parsed = gson.fromJson(entry.resultJson, SuggestMetadataOutput::class.java)
                         val score = computedTotalScore(parsed)
                         val karat = parsed.purity?.ifBlank { "Unknown" } ?: "Unknown"
-                        val stampLabel = if (parsed.stampDetected && !parsed.stampText.isNullOrBlank()) {
+                        val hasStampEvidence = parsed.stampDetected && !parsed.stampText.isNullOrBlank()
+                        val stampLabel = if (hasStampEvidence) {
                             "karat stamp: ${parsed.stampText} (${parsed.stampConfidence}%)"
                         } else {
                             "No clear karat stamp"
@@ -156,13 +158,13 @@ class HomeFragment : Fragment() {
                             .format(Date(entry.timestamp))
                         HistoryCard(
                             title = title,
-                            scoreLabel = if (score > 0) score.toString() else "N/A",
                             karatLabel = karat,
                             stampLabel = stampLabel,
                             resultJson = entry.resultJson,
                             previewUri = entry.previewUri,
                             timestamp = entry.timestamp,
-                            scoreValue = if (score > 0) score else null
+                            scoreValue = if (score > 0) score else null,
+                            hasStampEvidence = hasStampEvidence
                         )
                     }.getOrNull()
                 }
@@ -193,7 +195,7 @@ class HomeFragment : Fragment() {
                 } else {
                     latestEntry = null
                     homeTotalValue.text = "0"
-                    homeAvgValue.text = "0"
+                    homeAvgValue.text = "--"
                     homeTopValue.text = "N/A"
                     pastResultsContainer.removeAllViews()
                     emptyPastResultsView.visibility = View.VISIBLE
@@ -206,25 +208,20 @@ class HomeFragment : Fragment() {
         val scores = cards.mapNotNull { it.scoreValue }
         val avg = if (scores.isNotEmpty()) scores.average() else 0.0
         val topKarat = cards
-            .groupingBy { it.karatLabel }
+            .map { it.karatLabel.trim() }
+            .filter { it.isNotBlank() && !it.equals("Unknown", ignoreCase = true) }
+            .groupingBy { it }
             .eachCount()
             .maxByOrNull { it.value }
             ?.key
             ?: "N/A"
 
         binding?.homeTotalValue?.text = cards.size.toString()
-        binding?.homeAvgValue?.text = if (scores.isEmpty()) "0" else String.format("%.1f", avg)
+        binding?.homeAvgValue?.text = if (scores.isEmpty()) "--" else String.format(Locale.US, "%.1f", avg)
         binding?.homeTopValue?.text = topKarat
     }
 
     private fun createResultCard(card: HistoryCard): View {
-        val resultData = mapOf(
-            "title" to card.title,
-            "score" to card.scoreLabel,
-            "karat" to card.karatLabel,
-            "stamp" to card.stampLabel
-        )
-
         val cardView = LinearLayout(requireContext()).apply {
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
@@ -244,7 +241,7 @@ class HomeFragment : Fragment() {
                 LinearLayout.LayoutParams.MATCH_PARENT,
                 LinearLayout.LayoutParams.WRAP_CONTENT
             )
-            text = resultData["title"] ?: ""
+            text = card.title
             setTextColor(resources.getColor(R.color.jg_gold_light, null))
             textSize = 14f
             setTypeface(null, android.graphics.Typeface.BOLD)
@@ -257,7 +254,8 @@ class HomeFragment : Fragment() {
             ).apply {
                 topMargin = 8
             }
-            text = "Quality Score: ${resultData["score"] ?: "N/A"}%"
+            val scoreText = card.scoreValue?.let { "$it%" } ?: "N/A"
+            text = "Quality Score: $scoreText"
             setTextColor(resources.getColor(R.color.jg_text_primary, null))
             textSize = 12.5f
         }
@@ -269,15 +267,14 @@ class HomeFragment : Fragment() {
             ).apply {
                 topMargin = 4
             }
-            text = "Predicted Karat: ${resultData["karat"] ?: "N/A"} | Stamp: ${resultData["stamp"] ?: "N/A"}"
+            text = "Predicted Karat: ${card.karatLabel} | Stamp: ${card.stampLabel}"
             setTextColor(resources.getColor(R.color.jg_text_secondary, null))
             textSize = 12f
         }
 
-        val stampDetected = card.stampLabel != "No Stamp Evidence"
-        materialView.setBackgroundResource(if (stampDetected) R.drawable.bg_badge_tier_a else R.drawable.bg_badge_tier_d)
+        materialView.setBackgroundResource(if (card.hasStampEvidence) R.drawable.bg_badge_tier_a else R.drawable.bg_badge_tier_d)
         materialView.setPadding(12, 10, 12, 10)
-        materialView.setTextColor(resources.getColor(if (stampDetected) R.color.jg_gold_light else R.color.jg_text_secondary, null))
+        materialView.setTextColor(resources.getColor(if (card.hasStampEvidence) R.color.jg_gold_light else R.color.jg_text_secondary, null))
 
         cardView.addView(titleView)
         cardView.addView(scoreView)

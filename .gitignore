@@ -3,6 +3,9 @@
 .kotlin/
 **/build/
 app/build/
+**/.cxx/
+**/.externalNativeBuild/
+schemas/
 
 # IDE/editor
 .idea/

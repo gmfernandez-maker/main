@@ -54,13 +54,14 @@ android {
 
     kotlinOptions {
         jvmTarget = "17"
+        javaParameters = true
     }
 
     buildFeatures {
         viewBinding = true
         buildConfig = true
     }
-    packagingOptions {
+    packaging {
         jniLibs {
             pickFirsts += "**/libc++_shared.so"
         }
@@ -144,4 +145,6 @@ dependencies {
     implementation("com.squareup.okhttp3:logging-interceptor:4.11.0")
     // WorkManager for periodic price updates
     implementation("androidx.work:work-runtime-ktx:2.8.1")
+
+    testImplementation("junit:junit:4.13.2")
 }

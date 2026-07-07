@@ -30,7 +30,6 @@ object NativeRepository {
     private const val KEY_CURRENT_USER_ID = "supabase_current_user_id"
     private const val KEY_CURRENT_USER_EMAIL = "supabase_current_user_email"
     private const val KEY_CURRENT_USER_FULL_NAME = "supabase_current_user_full_name"
-    private const val KEY_HISTORY = "grade_history"
     private const val KEY_SYNCED_HISTORY_KEYS = "synced_history_keys"
     private const val KEY_LAST_HISTORY_SYNC_AT = "last_history_sync_at"
     private const val KEY_FEEDBACK_SHARING = "feedback_sharing_enabled"
@@ -242,36 +241,6 @@ object NativeRepository {
         }
     }
 
-    // Simple history storage for graded results (stored locally and optionally synced to Supabase)
-    data class StoredHistoryEntry(
-        val resultJson: String,
-        val previewUri: String,
-        val timestamp: Long = System.currentTimeMillis()
-    )
-
-    fun saveHistory(context: Context, resultJson: String, previewUri: String) {
-        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-        val raw = prefs.getString(KEY_HISTORY, null).orEmpty()
-        val type = object : TypeToken<List<StoredHistoryEntry>>() {}.type
-        val parsed = gson.fromJson(raw, type) as? List<StoredHistoryEntry>
-        val list: MutableList<StoredHistoryEntry> = parsed?.toMutableList() ?: mutableListOf()
-
-        val newEntry = StoredHistoryEntry(resultJson = resultJson, previewUri = previewUri)
-        list.add(0, newEntry)
-        prefs.edit().putString(KEY_HISTORY, gson.toJson(list)).apply()
-
-        syncHistoryToSupabaseAsync(context, newEntry)
-    }
-
-    fun loadHistory(context: Context): List<StoredHistoryEntry> {
-        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-        val raw = prefs.getString(KEY_HISTORY, null).orEmpty()
-        if (raw.isBlank()) return emptyList()
-
-        val type = object : TypeToken<List<StoredHistoryEntry>>() {}.type
-        return (gson.fromJson(raw, type) as? List<StoredHistoryEntry>) ?: emptyList()
-    }
-
     fun getLastHistorySyncAt(context: Context): Long {
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         return prefs.getLong(KEY_LAST_HISTORY_SYNC_AT, 0L)
@@ -448,35 +417,6 @@ object NativeRepository {
             .putString(KEY_ACCESS_TOKEN, session.accessToken)
             .putString(KEY_REFRESH_TOKEN, session.refreshToken)
             .apply()
-    }
-
-    private fun syncHistoryToSupabaseAsync(context: Context, entry: StoredHistoryEntry) {
-        if (!supabaseEnabled()) return
-
-        thread(start = true, isDaemon = true) {
-            val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-            val accessToken = prefs.getString(KEY_ACCESS_TOKEN, null).orEmpty()
-            val userId = prefs.getString(KEY_CURRENT_USER_ID, null).orEmpty()
-            if (accessToken.isBlank() || userId.isBlank()) return@thread
-
-            runCatching {
-                val payload = mapOf(
-                    "user_id" to userId,
-                    "result_json" to entry.resultJson,
-                    "preview_uri" to entry.previewUri,
-                    "created_at" to entry.timestamp
-                )
-
-                val request = Request.Builder()
-                    .url(supabaseRestUrl("history_entries"))
-                    .supabaseHeaders(accessToken)
-                    .header("Prefer", "return=minimal")
-                    .post(gson.toJson(payload).toRequestBody(jsonMediaType))
-                    .build()
-
-                httpClient.newCall(request).execute().use { }
-            }
-        }
     }
 
     fun syncHistoryEntryToSupabase(context: Context, entry: HistoryEntry) {

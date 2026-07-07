@@ -51,7 +51,7 @@
                 android:id="@+id/userNameText"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="John Doe"
+                android:text="User"
                 android:textAppearance="@style/TextAppearance.Material3.TitleLarge"
                 android:textColor="@color/jg_gold_light"
                 android:gravity="center"
@@ -62,7 +62,7 @@
                 android:id="@+id/userEmailText"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="john.doe@example.com"
+                android:text="No email"
                 android:textColor="@color/jg_text_secondary"
                 android:gravity="center"
                 android:textSize="14sp" />

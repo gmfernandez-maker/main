@@ -63,18 +63,18 @@ class AdvancedMetricsFragment : Fragment() {
         } catch (e: Exception) {
             null
         } ?: SuggestMetadataOutput(
-            material = "Sample Item",
+            material = "Unknown Item",
             purity = "Unknown",
             gemstones = null,
-            qualityScore = 90,
-            analysis = "Sample analysis (frontend)",
+            qualityScore = 0,
+            analysis = "No grading result was provided.",
             similarProducts = null,
-            yoloScore = 90,
-            lbpScore = 88,
-            orbScore = 85,
-            expectedWeightGrams = 3.2f,
-            sourceHash = "sample",
-            yoloModelUsed = "YOLOv8n"
+            yoloScore = 0,
+            lbpScore = 0,
+            orbScore = 0,
+            expectedWeightGrams = null,
+            sourceHash = null,
+            yoloModelUsed = null
         )
 
         binding?.apply {

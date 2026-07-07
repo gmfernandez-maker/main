@@ -86,7 +86,7 @@
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:layout_marginTop="3dp"
-                            android:text="85%"
+                            android:text="--"
                             android:textColor="@color/jg_gold_light"
                             android:textSize="24sp"
                             android:textStyle="bold" />
@@ -110,7 +110,7 @@
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:layout_marginTop="3dp"
-                            android:text="Karat estimate"
+                            android:text="N/A"
                             android:paddingStart="10dp"
                             android:paddingTop="4dp"
                             android:paddingEnd="10dp"
@@ -137,7 +137,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="3dp"
-                    android:text="• Type: Bracelet\n• Karat: Unknown\n• Stamp: No clear karat stamp"
+                    android:text="- Type: N/A\n- Karat: N/A\n- Stamp: No clear karat stamp"
                     android:textColor="@color/jg_text_primary"
                     android:textSize="13sp" />
 
@@ -182,7 +182,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="4dp"
-                        android:text="24"
+                        android:text="0"
                         android:textColor="@color/jg_text_primary"
                         android:textSize="20sp"
                         android:textStyle="bold" />
@@ -209,7 +209,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="4dp"
-                        android:text="88.5"
+                        android:text="--"
                         android:textColor="@color/jg_text_primary"
                         android:textSize="20sp"
                         android:textStyle="bold" />
@@ -236,7 +236,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="4dp"
-                            android:text="18K"
+                        android:text="N/A"
                         android:textColor="@color/jg_text_primary"
                         android:textSize="14sp"
                         android:textStyle="bold" />
