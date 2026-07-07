@@ -12,13 +12,17 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import com.gabby.studiowebwrapper.R
+import com.gabby.studiowebwrapper.data.AppDatabase
+import com.gabby.studiowebwrapper.data.HistoryEntry
 import com.gabby.studiowebwrapper.data.NativeRepository
-import com.gabby.studiowebwrapper.util.KaratPreferenceManager
+import com.gabby.studiowebwrapper.model.SuggestMetadataOutput
 import com.google.android.material.button.MaterialButton
+import com.google.gson.Gson
 import java.text.DateFormat
 import java.util.Date
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
 
 class AccountFragment : Fragment() {
@@ -31,6 +35,8 @@ class AccountFragment : Fragment() {
 
     private var callbacks: Callbacks? = null
     private var syncRefreshJob: Job? = null
+    private var statsJob: Job? = null
+    private val gson = Gson()
 
     override fun onAttach(context: Context) {
         super.onAttach(context)
@@ -51,9 +57,6 @@ class AccountFragment : Fragment() {
         val currentUser = NativeRepository.getCurrentUser(requireContext())
         val userName = currentUser?.fullName?.takeIf { it.isNotBlank() } ?: "User"
         val userEmail = currentUser?.email ?: "No email"
-        val totalGradings = 24
-        val averageScore = "88.5"
-        val preferredKarat = KaratPreferenceManager.getPreferredKarat(requireContext())
 
         // Set user info
         view.findViewById<TextView>(R.id.userNameText).text = userName
@@ -71,10 +74,7 @@ class AccountFragment : Fragment() {
             }
         }
 
-        // Set statistics
-        view.findViewById<TextView>(R.id.totalGradingsValue).text = totalGradings.toString()
-        view.findViewById<TextView>(R.id.averageScoreValue).text = averageScore
-        view.findViewById<TextView>(R.id.favoriteGemstoneValue).text = preferredKarat
+        bindStatistics(view, currentUser?.id.orEmpty())
 
         // Settings button
         view.findViewById<LinearLayout>(R.id.settingsButton).setOnClickListener {
@@ -92,16 +92,11 @@ class AccountFragment : Fragment() {
         }
     }
 
-    override fun onResume() {
-        super.onResume()
-        // Refresh preferred karat in case it was changed in settings
-        val karat = KaratPreferenceManager.getPreferredKarat(requireContext())
-        view?.findViewById<TextView>(R.id.favoriteGemstoneValue)?.text = karat
-    }
-
     override fun onDestroyView() {
         syncRefreshJob?.cancel()
         syncRefreshJob = null
+        statsJob?.cancel()
+        statsJob = null
         super.onDestroyView()
     }
 
@@ -113,6 +108,92 @@ class AccountFragment : Fragment() {
             "Last sync: $formatted"
         } else {
             "Last sync: Not synced yet"
+        }
+    }
+
+    private fun bindStatistics(view: View, userId: String) {
+        val totalGradingsView = view.findViewById<TextView>(R.id.totalGradingsValue)
+        val averageScoreView = view.findViewById<TextView>(R.id.averageScoreValue)
+        val topKaratView = view.findViewById<TextView>(R.id.favoriteGemstoneValue)
+
+        statsJob?.cancel()
+        if (userId.isBlank()) {
+            updateStatisticsViews(totalGradingsView, averageScoreView, topKaratView, AccountStats.empty())
+            return
+        }
+
+        updateStatisticsViews(totalGradingsView, averageScoreView, topKaratView, AccountStats.empty())
+        val appContext = requireContext().applicationContext
+        statsJob = viewLifecycleOwner.lifecycleScope.launch {
+            viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
+                AppDatabase.getInstance(appContext).historyDao().getAllForUser(userId).collect { entries ->
+                    updateStatisticsViews(
+                        totalGradingsView,
+                        averageScoreView,
+                        topKaratView,
+                        buildAccountStats(entries)
+                    )
+                }
+            }
+        }
+    }
+
+    private fun updateStatisticsViews(
+        totalGradingsView: TextView,
+        averageScoreView: TextView,
+        topKaratView: TextView,
+        stats: AccountStats
+    ) {
+        totalGradingsView.text = stats.totalGradings.toString()
+        averageScoreView.text = stats.averageScoreLabel
+        topKaratView.text = stats.topKaratLabel
+    }
+
+    private fun buildAccountStats(entries: List<HistoryEntry>): AccountStats {
+        val parsedResults = entries.mapNotNull { entry ->
+            runCatching { gson.fromJson(entry.resultJson, SuggestMetadataOutput::class.java) }.getOrNull()
+        }
+        val scores = parsedResults
+            .map { computedTotalScore(it) }
+            .filter { it > 0 }
+        val averageScore = scores.takeIf { it.isNotEmpty() }?.average()
+        val topKarat = parsedResults
+            .mapNotNull { it.purity?.trim() }
+            .filter { it.isNotBlank() && !it.equals("Unknown", ignoreCase = true) }
+            .groupingBy { it }
+            .eachCount()
+            .maxWithOrNull(compareBy<Map.Entry<String, Int>> { it.value }.thenBy { it.key })
+            ?.key
+
+        return AccountStats(
+            totalGradings = entries.size,
+            averageScoreLabel = averageScore?.let { String.format(java.util.Locale.US, "%.1f", it) } ?: "--",
+            topKaratLabel = topKarat ?: "N/A"
+        )
+    }
+
+    private fun computedTotalScore(result: SuggestMetadataOutput): Int {
+        val persistedTotal = result.totalComputedScore.coerceIn(0, 100)
+        if (persistedTotal > 0) return persistedTotal
+
+        val yolo = result.yoloScore.coerceIn(0, 100)
+        val lbp = result.lbpScore.coerceIn(0, 100)
+        val orb = result.orbScore.coerceIn(0, 100)
+        val hasComponents = yolo > 0 || lbp > 0 || orb > 0
+        return if (hasComponents) (yolo + lbp + orb) / 3 else result.qualityScore.coerceIn(0, 100)
+    }
+
+    private data class AccountStats(
+        val totalGradings: Int,
+        val averageScoreLabel: String,
+        val topKaratLabel: String
+    ) {
+        companion object {
+            fun empty(): AccountStats = AccountStats(
+                totalGradings = 0,
+                averageScoreLabel = "--",
+                topKaratLabel = "N/A"
+            )
         }
     }
 }

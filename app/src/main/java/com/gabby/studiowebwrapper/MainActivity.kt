@@ -18,6 +18,7 @@ import com.gabby.studiowebwrapper.ui.SignupFragment
 import com.gabby.studiowebwrapper.ui.UploadFragment
 import com.gabby.studiowebwrapper.ui.WelcomeFragment
 import com.gabby.studiowebwrapper.ui.SettingsPreferencesFragment
+import com.gabby.studiowebwrapper.ui.EmailVerificationFragment
 import com.gabby.studiowebwrapper.util.ThemeModeManager
 import com.gabby.studiowebwrapper.data.AppDatabase
 import com.gabby.studiowebwrapper.data.HistoryEntry
@@ -37,6 +38,7 @@ class MainActivity : AppCompatActivity(),
     WelcomeFragment.Callbacks,
     LoginFragment.Callbacks,
     SignupFragment.Callbacks,
+    EmailVerificationFragment.Callbacks,
     UploadFragment.Callbacks,
     GradeResultFragment.Callbacks,
     AdvancedMetricsFragment.Callbacks,
@@ -100,6 +102,11 @@ class MainActivity : AppCompatActivity(),
     override fun navigateToSignup() {
         bottomNav.visibility = android.view.View.GONE
         safeReplaceFragment(SignupFragment(), addToBackStack = true)
+    }
+
+    override fun navigateToEmailVerification(email: String) {
+        bottomNav.visibility = android.view.View.GONE
+        safeReplaceFragment(EmailVerificationFragment.newInstance(email), addToBackStack = true)
     }
 
     override fun navigateToUpload() {

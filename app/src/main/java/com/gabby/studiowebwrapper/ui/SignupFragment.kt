@@ -20,6 +20,7 @@ class SignupFragment : Fragment() {
 
     interface Callbacks {
         fun navigateToLogin()
+        fun navigateToEmailVerification(email: String)
         fun navigateToUpload()
         fun navigateBack()
     }
@@ -56,9 +57,16 @@ class SignupFragment : Fragment() {
         val fullName = currentBinding.fullNameInput.text.toString().trim()
         val email = currentBinding.emailInput.text.toString().trim()
         val password = currentBinding.passwordInput.text.toString()
+        val confirmPassword = currentBinding.confirmPasswordInput.text.toString()
 
-        if (email.isBlank() || password.length < 6) {
+        if (email.isBlank() || password.length < 6 || confirmPassword.length < 6) {
             currentBinding.errorText.text = getString(R.string.signup_validation_error)
+            currentBinding.errorText.isVisible = true
+            return
+        }
+
+        if (password != confirmPassword) {
+            currentBinding.errorText.text = getString(R.string.signup_password_mismatch)
             currentBinding.errorText.isVisible = true
             return
         }
@@ -72,7 +80,13 @@ class SignupFragment : Fragment() {
 
             result.onSuccess {
                 Toast.makeText(requireContext(), getString(R.string.signup_success), Toast.LENGTH_SHORT).show()
-                callbacks?.navigateToUpload()
+                val shouldVerifyEmail = it.message.contains("confirm your account", ignoreCase = true) ||
+                    it.message.contains("check your email", ignoreCase = true)
+                if (shouldVerifyEmail) {
+                    callbacks?.navigateToEmailVerification(email)
+                } else {
+                    callbacks?.navigateToUpload()
+                }
             }.onFailure {
                 currentBinding.errorText.text = it.message ?: getString(R.string.generic_error)
                 currentBinding.errorText.isVisible = true
@@ -87,6 +101,7 @@ class SignupFragment : Fragment() {
             fullNameInput.isEnabled = !isLoading
             emailInput.isEnabled = !isLoading
             passwordInput.isEnabled = !isLoading
+            confirmPasswordInput.isEnabled = !isLoading
             loginLink.isEnabled = !isLoading
             errorText.isVisible = false
         }

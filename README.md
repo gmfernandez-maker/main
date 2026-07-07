@@ -223,6 +223,7 @@ Validation note:
 - This app provides AI-assisted visual grading and similarity cues.
 - Results are not a certified authenticity report.
 - For high-value transactions, use professional gemstone/gold testing.
+- If email verification is enabled in Supabase, new signups are routed to a verification screen after signup. If no confirmation email arrives, verify Supabase SMTP/email delivery settings in the backend dashboard.
 
 ## Formulas & Calculations
 

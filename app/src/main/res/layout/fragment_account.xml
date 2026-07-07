@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@drawable/bg_black_gold"
@@ -42,7 +43,7 @@
                 android:padding="12dp"
                 android:src="@drawable/ic_person"
                 android:contentDescription="Profile icon"
-                android:tint="@color/jg_gold_light"
+                app:tint="@color/jg_gold_light"
                 android:layout_marginBottom="16dp" />
 
             <!-- User Name -->
@@ -118,7 +119,7 @@
                     android:id="@+id/totalGradingsValue"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="24"
+                    android:text="0"
                     android:textAppearance="@style/TextAppearance.Material3.HeadlineMedium"
                     android:textColor="@color/jg_gold_light"
                     android:textStyle="bold" />
@@ -147,7 +148,7 @@
                     android:id="@+id/averageScoreValue"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="88.5"
+                    android:text="--"
                     android:textAppearance="@style/TextAppearance.Material3.HeadlineMedium"
                     android:textColor="@color/jg_gold_light"
                     android:textStyle="bold" />
@@ -169,7 +170,7 @@
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Preferred Karat"
+                android:text="Top Karat"
                 android:textColor="@color/jg_gold"
                 android:textSize="12sp"
                 android:layout_marginBottom="8dp" />
@@ -178,7 +179,7 @@
                 android:id="@+id/favoriteGemstoneValue"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="18K"
+                android:text="N/A"
                 android:textAppearance="@style/TextAppearance.Material3.HeadlineMedium"
                 android:textColor="@color/jg_gold_light"
                 android:textStyle="bold" />

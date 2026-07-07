@@ -101,7 +101,7 @@ class SettingsPreferencesFragment : Fragment(), ModelSelectionDialogFragment.Cal
     }
 
     override fun onModelSelected(variant: ModelVariant) {
-        updateModelButtonText(view!!)
+        view?.let { updateModelButtonText(it) }
         Toast.makeText(
             requireContext(),
             "Model switched to ${variant.label}\nRestart the app to apply changes",

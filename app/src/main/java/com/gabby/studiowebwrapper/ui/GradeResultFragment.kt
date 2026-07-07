@@ -494,11 +494,6 @@ class GradeResultFragment : Fragment() {
                     onEstimateValueClicked()
                 }
 
-                // Save demo API key provided by user so worker can use it
-                try {
-                    PaxgPrefs.saveApiKey(requireContext(), "CG-XhbiPwxgu9txJofb1TcyzVQ6")
-                } catch (_: Exception) {}
-
                 // Price last-updated display and manual refresh
                         fun updatePriceUpdatedView() {
                             val last = PaxgPrefs.getLastUpdatedMs(requireContext())

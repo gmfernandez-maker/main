@@ -2,13 +2,12 @@ package com.gabby.studiowebwrapper.inference
 
 import android.content.Context
 import android.graphics.Bitmap
-import android.graphics.Matrix
 import android.util.Log
+import com.gabby.studiowebwrapper.model.YoloDetectionOutput
+import com.gabby.studiowebwrapper.util.YoloLabels
 import org.pytorch.IValue
 import org.pytorch.Module
 import org.pytorch.Tensor
-import org.pytorch.torchvision.TensorImageUtils
-import com.gabby.studiowebwrapper.model.YoloDetectionOutput
 import kotlin.math.max
 import kotlin.math.min
 import java.io.File
@@ -17,6 +16,8 @@ import java.io.FileOutputStream
 object ModelRunner {
     private const val TAG = "ModelRunner"
     private const val MODEL_ASSET_NAME = "weights.torchscript"
+    private const val INPUT_SIZE = 640
+    private const val CONF_THRESHOLD = 0.25f
     private var module: Module? = null
 
     fun isLoaded(): Boolean = module != null
@@ -25,15 +26,13 @@ object ModelRunner {
         if (module != null) return true
         return try {
             val assetName = if (com.gabby.studiowebwrapper.util.ModelPreferenceManager.useQuantizedModel(context) &&
-                try { context.assets.open("weights_quant.torchscript"); true } catch (_: Throwable) { false }
+                assetExists(context, "weights_quant.torchscript")
             ) "weights_quant.torchscript" else MODEL_ASSET_NAME
 
             val file = File(context.filesDir, assetName)
             val t0 = System.nanoTime()
-            if (!file.exists()) {
-                context.assets.open(assetName).use { input ->
-                    FileOutputStream(file).use { out -> input.copyTo(out) }
-                }
+            context.assets.open(assetName).use { input ->
+                FileOutputStream(file, false).use { out -> input.copyTo(out) }
             }
             module = Module.load(file.absolutePath)
             // Configure runtime threads
@@ -80,9 +79,8 @@ object ModelRunner {
 
     /**
      * Parse model output in multiple possible formats:
-     * - Format 1 (YOLOv8 standard): [N, 6+C] where [cx,cy,w,h,obj_conf,cls_scores...]
-     * - Format 2 (Corner coords): [N, 6+C] where [x1,y1,x2,y2,obj_conf,cls_scores...]
-     * - Format 3 (Multi-head): [N, 6] + [N, C] (detections + classes)
+     * - YOLOv8 TorchScript detect head: [1, 4+C, N] or [4+C, N].
+     * - Row-major fallback: [N, 4+C] or legacy [N, 5+C].
      * Returns list of YoloDetectionOutput in normalized coordinates [0,1].
      */
     private fun parseModelOutput(shape: LongArray, data: FloatArray): List<YoloDetectionOutput> {
@@ -91,7 +89,16 @@ object ModelRunner {
             return emptyList()
         }
 
-        // Common case: 2D output [N, attrs]
+        if (shape.size == 3 && shape[0] == 1L) {
+            val dim1 = shape[1].toInt()
+            val dim2 = shape[2].toInt()
+            return when {
+                dim1 >= 5 && dim2 > dim1 -> parseYoloChannelMajor(dim1, dim2, data)
+                dim2 >= 5 -> parseYoloRows(dim1, dim2, data)
+                else -> emptyList()
+            }
+        }
+
         if (shape.size == 2) {
             val rows = shape[0].toInt()
             val cols = shape[1].toInt()
@@ -99,129 +106,123 @@ object ModelRunner {
                 Log.w(TAG, "Invalid shape: rows=$rows, cols=$cols (need rows>0, cols>=5)")
                 return emptyList()
             }
-            return parseDetections2D(rows, cols, data)
-        }
-
-        // Fallback: if shape is 1D or 3D, attempt reshape or log warning
-        Log.w(TAG, "Output shape ${shape.contentToString()} not standard 2D; attempting fallback")
-        if (shape.size == 1) {
-            // Try to reshape as [N, 6] with N = data.size / 6
-            val cols = 6
-            val rows = (data.size + cols - 1) / cols
-            if (rows > 0 && data.size >= cols) {
-                return parseDetections2D(rows, cols, data)
+            return if (rows >= 5 && rows <= 128 && cols > rows) {
+                parseYoloChannelMajor(rows, cols, data)
+            } else {
+                parseYoloRows(rows, cols, data)
             }
         }
+
+        if (shape.size == 1) {
+            val channels = 4 + YoloLabels.classNames.size
+            if (data.size % channels == 0) {
+                return parseYoloChannelMajor(channels, data.size / channels, data)
+            }
+            if (data.size % 6 == 0) {
+                return parseYoloRows(data.size / 6, 6, data)
+            }
+        }
+
+        Log.w(TAG, "Output shape ${shape.contentToString()} is unsupported")
         return emptyList()
     }
 
-    private fun parseDetections2D(rows: Int, cols: Int, data: FloatArray): List<YoloDetectionOutput> {
+    private fun parseYoloChannelMajor(channels: Int, predictions: Int, data: FloatArray): List<YoloDetectionOutput> {
         val detections = mutableListOf<YoloDetectionOutput>()
-        val modelSize = 640f
+        val classCount = min(YoloLabels.classNames.size, channels - 4)
+        if (classCount <= 0 || data.size < channels * predictions) return emptyList()
 
-        for (r in 0 until rows) {
-            val base = r * cols
-            if (base + 4 >= data.size) break
+        for (index in 0 until predictions) {
+            val cx = data[index]
+            val cy = data[predictions + index]
+            val width = data[(2 * predictions) + index]
+            val height = data[(3 * predictions) + index]
 
-            // Try to infer coordinate format by heuristics:
-            // If first two values are small (< 100), likely normalized or center coords
-            // If values are large (> 100), likely absolute pixel coords
-            val v0 = data[base]
-            val v1 = data[base + 1]
-            val v2 = data[base + 2]
-            val v3 = data[base + 3]
-            val obj = data[base + 4]
-
-            if (obj <= 0f) continue // Skip low-confidence
-
-            val (x1, y1, x2, y2) = try {
-                when {
-                    // Format 1: Center coords [cx, cy, w, h, ...]
-                    // Assume center coords if all values are within reasonable range
-                    v0 > 0 && v0 < modelSize && v1 > 0 && v1 < modelSize &&
-                    v2 > 0 && v2 < modelSize && v3 > 0 && v3 < modelSize -> {
-                        val cx = v0
-                        val cy = v1
-                        val w = v2
-                        val h = v3
-                        val x1 = (cx - w / 2f) / modelSize
-                        val y1 = (cy - h / 2f) / modelSize
-                        val x2 = (cx + w / 2f) / modelSize
-                        val y2 = (cy + h / 2f) / modelSize
-                        Tuple4(x1, y1, x2, y2)
-                    }
-                    // Format 2: Corner coords [x1, y1, x2, y2, ...]
-                    // If first two < third/fourth, likely corner format
-                    v0 < v2 && v1 < v3 -> {
-                        val x1 = (v0 / modelSize).coerceIn(0f, 1f)
-                        val y1 = (v1 / modelSize).coerceIn(0f, 1f)
-                        val x2 = (v2 / modelSize).coerceIn(0f, 1f)
-                        val y2 = (v3 / modelSize).coerceIn(0f, 1f)
-                        Tuple4(x1, y1, x2, y2)
-                    }
-                    // Format 3: Normalized center coords [cx, cy, w, h] already in [0,1]
-                    v0 <= 1f && v1 <= 1f && v2 <= 1f && v3 <= 1f -> {
-                        val cx = v0
-                        val cy = v1
-                        val w = v2
-                        val h = v3
-                        val x1 = cx - w / 2f
-                        val y1 = cy - h / 2f
-                        val x2 = cx + w / 2f
-                        val y2 = cy + h / 2f
-                        Tuple4(x1, y1, x2, y2)
-                    }
-                    else -> {
-                        // Default fallback: treat as center coords
-                        Log.d(TAG, "Row $r: ambiguous coords [$v0,$v1,$v2,$v3]; assuming center format")
-                        val cx = v0 / modelSize
-                        val cy = v1 / modelSize
-                        val w = v2 / modelSize
-                        val h = v3 / modelSize
-                        val x1 = cx - w / 2f
-                        val y1 = cy - h / 2f
-                        val x2 = cx + w / 2f
-                        val y2 = cy + h / 2f
-                        Tuple4(x1, y1, x2, y2)
-                    }
-                }
-            } catch (e: Exception) {
-                Log.w(TAG, "Error parsing coords at row $r: ${e.message}")
-                continue
-            }
-
-            // Extract class scores
-            var bestCls = 0
-            var bestClsScore = 0f
-            if (cols > 5) {
-                for (c in 5 until cols) {
-                    val clsScore = data[base + c]
-                    if (clsScore > bestClsScore) {
-                        bestClsScore = clsScore
-                        bestCls = c - 5
-                    }
+            var bestClass = -1
+            var bestScore = 0f
+            for (classIndex in 0 until classCount) {
+                val score = data[((4 + classIndex) * predictions) + index]
+                if (score > bestScore) {
+                    bestScore = score
+                    bestClass = classIndex
                 }
             }
 
-            val score = obj * bestClsScore
-            if (score <= 0f) continue
-
-            detections.add(
-                YoloDetectionOutput(
-                    classId = bestCls,
-                    score = score,
-                    x1 = x1.coerceIn(0f, 1f),
-                    y1 = y1.coerceIn(0f, 1f),
-                    x2 = x2.coerceIn(0f, 1f),
-                    y2 = y2.coerceIn(0f, 1f)
-                )
-            )
+            addDetection(detections, cx, cy, width, height, bestScore, bestClass)
         }
         return detections
     }
 
-    // Simple data class for tuple return
-    private data class Tuple4(val x1: Float, val y1: Float, val x2: Float, val y2: Float)
+    private fun parseYoloRows(rows: Int, attrs: Int, data: FloatArray): List<YoloDetectionOutput> {
+        val detections = mutableListOf<YoloDetectionOutput>()
+        val yoloV8ClassCount = min(YoloLabels.classNames.size, attrs - 4)
+        val legacyClassCount = min(YoloLabels.classNames.size, attrs - 5)
+        if (data.size < rows * attrs) return emptyList()
+
+        for (row in 0 until rows) {
+            val base = row * attrs
+            val cx = data[base]
+            val cy = data[base + 1]
+            val width = data[base + 2]
+            val height = data[base + 3]
+
+            var bestClass = -1
+            var bestScore = 0f
+            if (attrs == 4 + YoloLabels.classNames.size && yoloV8ClassCount > 0) {
+                for (classIndex in 0 until yoloV8ClassCount) {
+                    val score = data[base + 4 + classIndex]
+                    if (score > bestScore) {
+                        bestScore = score
+                        bestClass = classIndex
+                    }
+                }
+            } else if (legacyClassCount > 0) {
+                val objectness = data[base + 4].coerceIn(0f, 1f)
+                for (classIndex in 0 until legacyClassCount) {
+                    val score = objectness * data[base + 5 + classIndex]
+                    if (score > bestScore) {
+                        bestScore = score
+                        bestClass = classIndex
+                    }
+                }
+            }
+
+            addDetection(detections, cx, cy, width, height, bestScore, bestClass)
+        }
+        return detections
+    }
+
+    private fun addDetection(
+        detections: MutableList<YoloDetectionOutput>,
+        cx: Float,
+        cy: Float,
+        width: Float,
+        height: Float,
+        score: Float,
+        classId: Int
+    ) {
+        if (score < CONF_THRESHOLD || score > 1.2f || classId !in YoloLabels.classNames.indices) return
+        if (width <= 0f || height <= 0f) return
+
+        val normalized = cx <= 1.5f && cy <= 1.5f && width <= 1.5f && height <= 1.5f
+        val scale = if (normalized) 1f else INPUT_SIZE.toFloat()
+        val x1 = ((cx - width / 2f) / scale).coerceIn(0f, 1f)
+        val y1 = ((cy - height / 2f) / scale).coerceIn(0f, 1f)
+        val x2 = ((cx + width / 2f) / scale).coerceIn(0f, 1f)
+        val y2 = ((cy + height / 2f) / scale).coerceIn(0f, 1f)
+        if (x2 <= x1 || y2 <= y1) return
+
+        detections.add(
+            YoloDetectionOutput(
+                classId = classId,
+                score = score.coerceIn(0f, 1f),
+                x1 = x1,
+                y1 = y1,
+                x2 = x2,
+                y2 = y2
+            )
+        )
+    }
 
     private var lastLoadMs: Long = 0
     private var lastInferenceMs: Long = 0
@@ -261,17 +262,28 @@ object ModelRunner {
     }
 
     private fun preprocess(bitmap: Bitmap): Tensor {
-        // Resize to 640x640 (or model expected size). Adjust if your model uses different dims.
-        val size = 640
-        val scaled = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
-        val matrix = Matrix()
-        val sx = size.toFloat() / bitmap.width
-        val sy = size.toFloat() / bitmap.height
-        matrix.setScale(sx, sy)
-        val canvas = android.graphics.Canvas(scaled)
-        canvas.drawBitmap(bitmap, matrix, null)
+        val resized = Bitmap.createScaledBitmap(bitmap, INPUT_SIZE, INPUT_SIZE, true)
+        val pixels = IntArray(INPUT_SIZE * INPUT_SIZE)
+        resized.getPixels(pixels, 0, INPUT_SIZE, 0, 0, INPUT_SIZE, INPUT_SIZE)
 
-        // Use torchvision helper to create tensor normalized to [0,1]
-        return TensorImageUtils.bitmapToFloat32Tensor(scaled, TensorImageUtils.TORCHVISION_NORM_MEAN_RGB, TensorImageUtils.TORCHVISION_NORM_STD_RGB)
+        val values = FloatArray(1 * 3 * INPUT_SIZE * INPUT_SIZE)
+        val plane = INPUT_SIZE * INPUT_SIZE
+        for (index in pixels.indices) {
+            val px = pixels[index]
+            values[index] = ((px shr 16) and 0xFF) / 255.0f
+            values[plane + index] = ((px shr 8) and 0xFF) / 255.0f
+            values[(2 * plane) + index] = (px and 0xFF) / 255.0f
+        }
+
+        return Tensor.fromBlob(values, longArrayOf(1, 3, INPUT_SIZE.toLong(), INPUT_SIZE.toLong()))
+    }
+
+    private fun assetExists(context: Context, assetName: String): Boolean {
+        return try {
+            context.assets.open(assetName).use { }
+            true
+        } catch (_: Throwable) {
+            false
+        }
     }
 }
